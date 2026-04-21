@@ -1,184 +1,294 @@
 import { useState } from "react";
-import { Link } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
+import RbacGuard, { ReadOnlyBanner } from "@/components/RbacGuard";
+import { useRbac } from "@/hooks/useRbac";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import DeleteConfirmButton from "@/components/DeleteConfirmButton";
-import Pagination, { usePagination } from "@/components/Pagination";
-import SearchableSelect from "@/components/SearchableSelect";
+import AddProductionForm from "@/components/AddProductionForm";
+import AddExpenseForm from "@/components/AddExpenseForm";
+import AddTeamForm from "@/components/AddTeamForm";
+import FavoriteButton from "@/components/FavoriteButton";
+import TeamsFilters from "@/components/TeamsFilters";
+import EditTeamForm from "@/components/EditTeamForm";
+import DeleteConfirmDialog, { DeleteButton } from "@/components/DeleteConfirmDialog";
 import { useData } from "@/contexts/DataContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { calcTeamMetrics } from "@/lib/calculations";
-import { Search, Plus, ExternalLink } from "lucide-react";
-import { toast } from "sonner";
-
-// ── Safe settings helper (works with any SettingsContext version) ──────────────
-function useMoney() {
-  const ctx = useSettings();
-  const s = ctx.settings as any;
-  const fmtFn = (ctx as any).fmt || (ctx as any).formatAmount || (ctx as any).getFormattedPrice || (ctx as any).currencyDisplay ||
-    ((v: number) => { const n = Math.round(v).toLocaleString("fr-FR"); return s?.currency === "CDF" ? `${n} FC` : `$${n}`; });
-  const symbol = (ctx as any).sym || (ctx as any).currencySymbol || (s?.currency === "CDF" ? "FC" : "$");
-  const gp = s?.goldPriceUsd || s?.goldPrice || 65;
-  return { settings: ctx.settings, fmt: fmtFn, sym: symbol, goldPrice: gp };
-}
-
-
-function AddTeamDialog() {
-  const [open, setOpen] = useState(false);
-  const { addTeam, sites } = useData();
-  const [form, setForm] = useState({ name: "", siteId: "", manager: "" });
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!form.name || !form.siteId) { toast.error("Nom et site obligatoires"); return; }
-    addTeam(form);
-    toast.success(`Équipe "${form.name}" créée`);
-    setForm({ name: "", siteId: "", manager: "" }); setOpen(false);
-  };
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button className="bg-amber-500 hover:bg-amber-600 text-white"><Plus size={16} className="mr-2"/>Nouvelle Équipe</Button></DialogTrigger>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader><DialogTitle>Créer une Équipe</DialogTitle></DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
-          <div><Label>Nom *</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="mt-1"/></div>
-          <div><Label>Site *</Label>
-            <SearchableSelect options={sites.map(s=>({value:s.id,label:s.name,subtitle:s.location}))}
-              value={form.siteId} onChange={v=>setForm({...form,siteId:v})} placeholder="Sélectionner un site..." className="mt-1"/>
-          </div>
-          <div><Label>Responsable</Label><Input value={form.manager} onChange={e=>setForm({...form,manager:e.target.value})} className="mt-1" placeholder="Assignable après création des employés"/></div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={()=>setOpen(false)} className="flex-1">Annuler</Button>
-            <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white">Créer</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function EditTeamDialog({ team }: { team: any }) {
-  const [open, setOpen] = useState(false);
-  const { updateTeam, sites, employees } = useData();
-  const [form, setForm] = useState({ name: team.name, siteId: team.siteId, manager: team.manager||"" });
-  const empOptions = employees.map(e => ({ value: e.name, label: e.name, subtitle: e.function }));
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    updateTeam(team.id, form);
-    toast.success("Équipe modifiée"); setOpen(false);
-  };
-  return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild><Button variant="outline" size="sm" className="h-8 text-xs text-blue-600">Modifier</Button></DialogTrigger>
-      <DialogContent className="sm:max-w-[400px]">
-        <DialogHeader><DialogTitle>Modifier l'Équipe</DialogTitle></DialogHeader>
-        <form onSubmit={submit} className="space-y-3">
-          <div><Label>Nom *</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="mt-1"/></div>
-          <div><Label>Site</Label>
-            <SearchableSelect options={sites.map(s=>({value:s.id,label:s.name}))} value={form.siteId} onChange={v=>setForm({...form,siteId:v})} className="mt-1"/>
-          </div>
-          <div><Label>Responsable (parmi les employés)</Label>
-            <SearchableSelect options={empOptions} value={form.manager} onChange={v=>setForm({...form,manager:v})} placeholder="Sélectionner un employé..." className="mt-1"/>
-          </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" onClick={()=>setOpen(false)} className="flex-1">Annuler</Button>
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">Enregistrer</Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
+import { teams, sites, employees, calculateTeamMetrics } from "@/lib/mockData";
+import { Users, TrendingUp, ExternalLink } from "lucide-react";
+import { Link } from "wouter";
 
 export default function Teams() {
-  const { teams, sites, employees, productions, expenses, deleteTeam } = useData();
-  const { settings, fmt, sym, goldPrice } = useMoney();
-  const [search, setSearch] = useState("");
-  const [filterSite, setFilterSite] = useState("all");
+  const [selectedSiteId, setSelectedSiteId] = useState("all");
 
-  const enriched = teams.map(t => {
-    const m = calcTeamMetrics(t, productions, expenses, settings.goldPriceUsd, sites);
-    return { ...t, ...m, employeeCount: employees.filter(e=>e.teamId===t.id).length };
-  }).sort((a,b) => b.totalProduction - a.totalProduction);
+  const teamMetrics = teams.map((team) => {
+    const site = sites.find((s) => s.id === team.siteId);
+    const teamEmployees = employees.filter((e) => e.teamId === team.id);
+    const metrics = calculateTeamMetrics(team.id);
 
-  const filtered = enriched.filter(t => {
-    const ms = !search || t.name?.toLowerCase().includes(search.toLowerCase()) || t.siteName?.toLowerCase().includes(search.toLowerCase());
-    const mSite = filterSite === "all" || t.siteId === filterSite;
-    return ms && mSite;
+    return {
+      ...team,
+      siteName: site?.name || "Unknown",
+      employeeCount: teamEmployees.length,
+      ...metrics,
+    };
   });
 
-  const { page, perPage, paginated, total, setPage, setPerPage } = usePagination(filtered);
+  // Filter by site
+  const filteredTeams = selectedSiteId === "all"
+    ? teamMetrics
+    : teamMetrics.filter((t) => t.siteId === selectedSiteId);
+
+  // Sort by production (volume of gold)
+  const sortedTeams = [...filteredTeams].sort((a, b) => b.totalProduction - a.totalProduction);
 
   return (
     <DashboardLayout>
-      <div className="space-y-5">
-        <div className="flex justify-between items-start flex-wrap gap-3">
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Gestion des Équipes</h1>
-            <p className="text-slate-500 text-sm">{teams.length} équipe(s)</p>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Gestion des Équipes
+            </h1>
+            <p className="text-slate-600">
+              Suivi des performances et rentabilité des équipes
+            </p>
           </div>
-          <AddTeamDialog />
+          <div className="flex gap-2">
+            <AddProductionForm />
+            <AddExpenseForm />
+            <AddTeamForm />
+          </div>
         </div>
 
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-            <Input placeholder="Rechercher une équipe..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="pl-9"/>
-          </div>
-          <select value={filterSite} onChange={e=>{setFilterSite(e.target.value);setPage(1);}}
-            className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
-            <option value="all">Tous les sites</option>
-            {sites.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-        </div>
+        {/* Filters */}
+        <TeamsFilters onFilterChange={setSelectedSiteId} />
 
+        {/* Teams Table */}
         <Card className="bg-white">
           <CardHeader>
-            <CardTitle className="text-base">
-              Classement par Production
-              <span className="ml-2 text-sm font-normal text-slate-400">({filtered.length} équipe{filtered.length>1?"s":""})</span>
-            </CardTitle>
+            <CardTitle>Classement des Équipes par Volume de Production</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="border-b border-slate-100">
-                  <tr>{["#","Équipe","Site","Resp.","Empl.","Or (g)","Valeur","Dépenses","Résultat","Rentab.","Statut","Actions"].map(h=>(
-                    <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{h}</th>
-                  ))}</tr>
+                <thead className="border-b border-slate-200">
+                  <tr>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900 w-10">
+                      ★
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Équipe
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Site
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Responsable
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900">
+                      Employés
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Production (g)
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Valeur (€)
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Dépenses (€)
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Résultat (€)
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Rentabilité
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900">
+                      Statut
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900">
+                      Actions
+                    </th>
+                  </tr>
                 </thead>
                 <tbody>
-                  {paginated.length===0?<tr><td colSpan={12} className="text-center py-8 text-slate-400">Aucune équipe</td></tr>:
-                  paginated.map((t,i)=>{
-                    const rank = (page-1)*perPage+i+1;
-                    return(<tr key={t.teamId} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="py-2 px-3 text-xs text-slate-400">{rank}</td>
-                      <td className="py-2 px-3">
-                        <Link href={`/team/${t.teamId}`}><a className="text-blue-600 hover:underline font-medium flex items-center gap-1 whitespace-nowrap">{t.teamName}<ExternalLink size={11}/></a></Link>
+                  {sortedTeams.map((team, index) => (
+                    <tr key={team.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="py-3 px-4 text-center">
+                        <FavoriteButton
+                          id={team.id || ""}
+                          type="team"
+                          name={team.name || ""}
+                          size="sm"
+                          variant="ghost"
+                        />
                       </td>
-                      <td className="py-2 px-3 text-xs text-slate-500 whitespace-nowrap">{t.siteName}</td>
-                      <td className="py-2 px-3 text-xs text-slate-600">{t.manager||"—"}</td>
-                      <td className="py-2 px-3 text-center"><span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full text-xs font-bold">{t.employeeCount}</span></td>
-                      <td className="py-2 px-3 font-bold text-amber-600">{t.totalProduction.toFixed(1)}</td>
-                      <td className="py-2 px-3 text-green-600 whitespace-nowrap">{fmt(t.totalValue)}</td>
-                      <td className="py-2 px-3 text-red-600 whitespace-nowrap">{fmt(t.totalExpenses)}</td>
-                      <td className={`py-2 px-3 font-bold whitespace-nowrap ${t.netResult>=0?"text-green-600":"text-red-600"}`}>{fmt(t.netResult)}</td>
-                      <td className="py-2 px-3 text-xs">{t.profitability.toFixed(1)}%</td>
-                      <td className="py-2 px-3"><span className={`px-2 py-0.5 rounded-full text-xs font-bold ${t.status==="Rentable"?"bg-green-100 text-green-700":"bg-red-100 text-red-700"}`}>{t.status}</span></td>
-                      <td className="py-2 px-3"><div className="flex gap-1"><EditTeamDialog team={t}/><DeleteConfirmButton itemName={t.teamName} onDelete={()=>deleteTeam(t.teamId)} adminOnly/></div></td>
-                    </tr>);
-                  })}
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 bg-amber-100 rounded-full flex items-center justify-center text-xs font-bold text-amber-700">
+                            {index + 1}
+                          </span>
+                          <Link href={`/team/${team.id}`}>
+                            <a className="font-medium text-blue-600 hover:text-blue-700 flex items-center gap-1">
+                              {team.name}
+                              <ExternalLink size={14} />
+                            </a>
+                          </Link>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-slate-600 text-xs">
+                        {team.siteName.split(" ")[0]}
+                      </td>
+                      <td className="py-3 px-4 text-slate-600">{team.manager}</td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-100 rounded-full text-xs font-bold text-blue-700">
+                          {team.employeeCount}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium text-slate-900">
+                        {team.totalProduction}
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium text-amber-600">
+                        {Math.round(team.totalValue / 1000)}k
+                      </td>
+                      <td className="py-3 px-4 text-right font-medium text-red-600">
+                        {Math.round(team.totalExpenses / 1000)}k
+                      </td>
+                      <td className="py-3 px-4 text-right font-bold">
+                        <span
+                          className={
+                            team.netResult > 0 ? "text-green-600" : "text-red-600"
+                          }
+                        >
+                          {Math.round(team.netResult / 1000)}k
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <span className="inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-900">
+                          {team.profitability.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
+                            team.status === "Rentable"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {team.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <EditTeamForm
+                          teamId={team.id}
+                          teamName={team.name}
+                          manager={team.manager}
+                        />
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-            <Pagination total={total} page={page} perPage={perPage} onPageChange={setPage} onPerPageChange={setPerPage}/>
           </CardContent>
         </Card>
+
+        {/* Team Details Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Most Productive Team */}
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <TrendingUp size={20} className="text-green-600" />
+                Équipe la Plus Productive
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {sortedTeams.length > 0 && (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-bold text-slate-900 text-lg">
+                        {sortedTeams[0].name}
+                      </p>
+                      <p className="text-sm text-slate-600">
+                        {sortedTeams[0].siteName}
+                      </p>
+                    </div>
+                    <span className="text-2xl font-bold text-amber-600">
+                      {sortedTeams[0].totalProduction}g
+                    </span>
+                  </div>
+                  <div className="bg-slate-50 rounded-lg p-3 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Valeur:</span>
+                      <span className="font-bold text-slate-900">
+                        {Math.round(sortedTeams[0].totalValue / 1000)}k €
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Dépenses:</span>
+                      <span className="font-bold text-slate-900">
+                        {Math.round(sortedTeams[0].totalExpenses / 1000)}k €
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-600">Rentabilité:</span>
+                      <span className="font-bold text-green-600">
+                        {sortedTeams[0].profitability.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Team Statistics */}
+          <Card className="bg-white">
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Users size={20} className="text-blue-600" />
+                Statistiques Globales
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+                  <span className="text-slate-600">Nombre d'équipes</span>
+                  <span className="font-bold text-slate-900">{teams.length}</span>
+                </div>
+                <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+                  <span className="text-slate-600">Production moyenne</span>
+                  <span className="font-bold text-slate-900">
+                    {Math.round(
+                      teamMetrics.reduce((sum, t) => sum + t.totalProduction, 0) /
+                        teams.length
+                    )}
+                    g
+                  </span>
+                </div>
+                <div className="flex justify-between items-center pb-3 border-b border-slate-200">
+                  <span className="text-slate-600">Rentabilité moyenne</span>
+                  <span className="font-bold text-slate-900">
+                    {(
+                      teamMetrics.reduce((sum, t) => sum + t.profitability, 0) /
+                      teams.length
+                    ).toFixed(1)}
+                    %
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-600">Équipes rentables</span>
+                  <span className="font-bold text-green-600">
+                    {teamMetrics.filter((t) => t.status === "Rentable").length}/
+                    {teams.length}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </DashboardLayout>
   );

@@ -2,290 +2,554 @@ import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import Pagination, { usePagination } from "@/components/Pagination";
-import SearchableSelect from "@/components/SearchableSelect";
-import { useData } from "@/contexts/DataContext";
-import { useSettings } from "@/contexts/SettingsContext";
-import { useAuth } from "@/hooks/useAuth";
+import { sites, teams } from "@/lib/mockData";
+import { Plus, Wrench, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import { toast } from "sonner";
-import { Plus, Search, Trash2, CheckCircle, Clock, AlertTriangle, XCircle, Package } from "lucide-react";
+import CurrencyDisplay from "@/components/CurrencyDisplay";
 
-function useMoney() {
-  const ctx = useSettings();
-  const s = ctx.settings as any;
-  const fmt = (ctx as any).fmt || (ctx as any).formatAmount || (ctx as any).getFormattedPrice ||
-    ((v: number) => { const n = v.toLocaleString("fr-FR", {minimumFractionDigits:0,maximumFractionDigits:2}); return s?.currency === "CDF" ? `${n} FC` : `$${n}`; });
-  const sym = (ctx as any).sym || (ctx as any).currencySymbol || (s?.currency === "CDF" ? "FC" : "$");
-  return { fmt, sym };
+interface Equipment {
+  id: string;
+  name: string;
+  type: string;
+  siteId: string;
+  teamId: string;
+  purchaseDate: string;
+  purchasePrice: number;
+  status: "Opérationnel" | "En maintenance" | "Hors service";
+  lastMaintenance: string;
+  nextMaintenance: string;
 }
 
-const TYPES = ["Pioche","Pelle","Pompe","Générateur","Véhicule","Détecteur","Outillage","Autre"];
-const STATUSES = ["Opérationnel","En maintenance","En panne","Détruit"];
+const EQUIPMENT_TYPES = [
+  "Pioche",
+  "Pelle",
+  "Pompe",
+  "Générateur",
+  "Véhicule",
+  "Détecteur",
+  "Outillage",
+  "Autre",
+];
 
-const statusIcon = (s: string) => {
-  if (s === "Opérationnel") return <CheckCircle size={13} className="text-green-500" />;
-  if (s === "En maintenance") return <Clock size={13} className="text-yellow-500" />;
-  if (s === "En panne") return <AlertTriangle size={13} className="text-orange-500" />;
-  return <XCircle size={13} className="text-red-500" />;
-};
-const statusColor = (s: string) => {
-  if (s === "Opérationnel") return "bg-green-100 text-green-700";
-  if (s === "En maintenance") return "bg-yellow-100 text-yellow-700";
-  if (s === "En panne") return "bg-orange-100 text-orange-700";
-  return "bg-red-100 text-red-700";
-};
+const EQUIPMENT_STATUS = [
+  { value: "Opérationnel", label: "Opérationnel", color: "bg-green-100 text-green-700" },
+  { value: "En maintenance", label: "En maintenance", color: "bg-yellow-100 text-yellow-700" },
+  { value: "Hors service", label: "Hors service", color: "bg-red-100 text-red-700" },
+];
 
 export default function Equipment() {
-  const data = useData() as any;
-  const equipment = data?.equipment || [];
-  const addEquipment = data?.addEquipment;
-  const updateEquipment = data?.updateEquipment;
-  const deleteEquipment = data?.deleteEquipment;
-  const addExpense = data?.addExpense;
-  const deleteExpense = data?.deleteExpense;
-  const sites = data?.sites || [];
-  const teams = data?.teams || [];
+  const [equipments, setEquipments] = useState<Equipment[]>([
+    {
+      id: "eq1",
+      name: "Pioche Standard",
+      type: "Pioche",
+      siteId: sites[0]?.id || "",
+      teamId: teams[0]?.id || "",
+      purchaseDate: "2023-01-15",
+      purchasePrice: 150000,
+      status: "Opérationnel",
+      lastMaintenance: "2026-03-10",
+      nextMaintenance: "2026-04-10",
+    },
+    {
+      id: "eq2",
+      name: "Vehicule de Transport",
+      type: "Vehicule",
+      siteId: sites[1]?.id || "",
+      teamId: teams[1]?.id || "",
+      purchaseDate: "2022-06-20",
+      purchasePrice: 80000,
+      status: "Opérationnel",
+      lastMaintenance: "2026-02-28",
+      nextMaintenance: "2026-03-28",
+    },
+  ]);
 
-  const { fmt, sym } = useMoney();
-  const { user } = useAuth();
-
-  const [open, setOpen] = useState(false);
-  const [delId, setDelId] = useState<string|null>(null);
-  const [search, setSearch] = useState("");
-  const [filterSite, setFilterSite] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [form, setForm] = useState({
-    name: "", type: "Pioche", siteId: "", teamId: "",
-    status: "Opérationnel", value: "", serialNumber: "",
+  const [selectedSite, setSelectedSite] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [openDialog, setOpenDialog] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    type: "Excavatrice",
+    siteId: sites[0]?.id || "",
+    teamId: teams[0]?.id || "",
     purchaseDate: new Date().toISOString().split("T")[0],
+    purchasePrice: 0,
+    status: "Opérationnel" as const,
+    lastMaintenance: new Date().toISOString().split("T")[0],
+    nextMaintenance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
   });
 
-  const siteOptions = sites.map((s: any) => ({ value: s.id, label: s.name, subtitle: s.location }));
-  const filteredTeams = form.siteId ? teams.filter((t: any) => t.siteId === form.siteId) : teams;
-  const teamOptions = filteredTeams.map((t: any) => ({ value: t.id, label: t.name }));
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!form.name || !form.siteId) { toast.error("Nom et site obligatoires"); return; }
-
-    const cost = parseFloat(form.value) || 0;
-    const eqId = `EQ${Date.now()}`;
-
-    // 1. Add equipment
-    addEquipment?.({ ...form, id: eqId, value: cost });
-
-    // 2. Auto-create expense if cost > 0
-    if (cost > 0 && addExpense) {
-      addExpense({
-        date: form.purchaseDate || new Date().toISOString().split("T")[0],
-        teamId: form.teamId || "",
-        siteId: form.siteId,
-        category: "Équipement",
-        amount: cost,
-        comment: `Achat équipement: ${form.name}`,
-        description: `Équipement — ${form.name} (${form.type})`,
-        equipmentId: eqId, // Link for later update/delete
-      });
-    }
-
-    toast.success(`Équipement "${form.name}" ajouté${cost > 0 ? ` — Dépense de ${fmt(cost)} créée automatiquement` : ""}`);
-    setForm({ name:"", type:"Pioche", siteId:"", teamId:"", status:"Opérationnel", value:"", serialNumber:"", purchaseDate: new Date().toISOString().split("T")[0] });
-    setOpen(false);
-  };
-
-  const handleDelete = (id: string) => {
-    const eq = equipment.find((e: any) => e.id === id);
-    deleteEquipment?.(id);
-    // Delete linked expense
-    if (eq && deleteExpense) {
-      const linkedExpenses = (data?.expenses || []).filter((ex: any) => ex.equipmentId === id || (ex.category === "Équipement" && ex.comment?.includes(eq.name)));
-      linkedExpenses.forEach((ex: any) => deleteExpense(ex.id));
-      if (linkedExpenses.length > 0) toast.info("Dépense liée supprimée automatiquement");
-    }
-    toast.success(`Équipement supprimé`);
-    setDelId(null);
-  };
-
-  const filtered = equipment.filter((e: any) => {
-    const site = sites.find((s: any) => s.id === e.siteId);
-    const ms = !search || e.name?.toLowerCase().includes(search.toLowerCase()) || site?.name?.toLowerCase().includes(search.toLowerCase()) || e.type?.toLowerCase().includes(search.toLowerCase());
-    const mSite = filterSite === "all" || e.siteId === filterSite;
-    const mSt = filterStatus === "all" || e.status === filterStatus;
-    return ms && mSite && mSt;
+  // Filter equipments
+  const filteredEquipments = equipments.filter((eq) => {
+    const matchesSite = selectedSite === "all" || eq.siteId === selectedSite;
+    const matchesStatus = selectedStatus === "all" || eq.status === selectedStatus;
+    return matchesSite && matchesStatus;
   });
 
-  const { page, perPage, paginated, total, setPage, setPerPage } = usePagination(filtered);
-  const totalValue = equipment.reduce((s: number, e: any) => s + (e.value || 0), 0);
-  const operational = equipment.filter((e: any) => e.status === "Opérationnel").length;
+  // Calculate statistics
+  const totalEquipments = equipments.length;
+  const operationalCount = equipments.filter((e) => e.status === "Opérationnel").length;
+  const maintenanceCount = equipments.filter((e) => e.status === "En maintenance").length;
+  const outOfServiceCount = equipments.filter((e) => e.status === "Hors service").length;
+  const totalValue = equipments.reduce((sum, e) => sum + e.purchasePrice, 0);
+
+  const handleAddEquipment = () => {
+    if (!formData.name || !formData.type) {
+      toast.error("Veuillez remplir tous les champs obligatoires");
+      return;
+    }
+
+    const newEquipment: Equipment = {
+      id: `eq${Date.now()}`,
+      ...formData,
+    };
+
+    setEquipments([...equipments, newEquipment]);
+    toast.success(`Équipement "${formData.name}" ajouté avec succès`);
+    setOpenDialog(false);
+    setFormData({
+      name: "",
+      type: "Excavatrice",
+      siteId: sites[0]?.id || "",
+      teamId: teams[0]?.id || "",
+      purchaseDate: new Date().toISOString().split("T")[0],
+      purchasePrice: 0,
+      status: "Opérationnel",
+      lastMaintenance: new Date().toISOString().split("T")[0],
+      nextMaintenance: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+    });
+  };
+
+  const handleDeleteEquipment = (id: string) => {
+    setEquipments(equipments.filter((e) => e.id !== id));
+    toast.success("Équipement supprimé");
+  };
+
+  const handleUpdateStatus = (id: string, newStatus: Equipment["status"]) => {
+    setEquipments(
+      equipments.map((e) =>
+        e.id === id ? { ...e, status: newStatus } : e
+      )
+    );
+    toast.success("Statut mis à jour");
+  };
+
+  const getStatusIcon = (status: Equipment["status"]) => {
+    switch (status) {
+      case "Opérationnel":
+        return <CheckCircle size={16} className="text-green-600" />;
+      case "En maintenance":
+        return <Clock size={16} className="text-yellow-600" />;
+      case "Hors service":
+        return <AlertCircle size={16} className="text-red-600" />;
+    }
+  };
+
+  const getStatusColor = (status: Equipment["status"]) => {
+    const statusObj = EQUIPMENT_STATUS.find((s) => s.value === status);
+    return statusObj?.color || "";
+  };
+
+  const siteTeams = teams.filter((t) => t.siteId === formData.siteId);
 
   return (
     <DashboardLayout>
-      <div className="space-y-5">
-        <div className="flex justify-between items-start flex-wrap gap-3">
+      <div className="space-y-6">
+        {/* Header */}
+        <ReadOnlyBanner/>
+        <div className="flex justify-between items-start">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Gestion des Équipements</h1>
-            <p className="text-slate-500 text-sm">{equipment.length} équipement(s) · Valeur totale: {fmt(totalValue)}</p>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Gestion des Équipements
+            </h1>
+            <p className="text-slate-600">
+              Suivi du parc d'équipements et de la maintenance
+            </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={openDialog} onOpenChange={setOpenDialog}>
             <DialogTrigger asChild>
-              <Button className="bg-amber-500 hover:bg-amber-600 text-white">
-                <Plus size={16} className="mr-2" /> Ajouter Équipement
+              <Button className="bg-blue-600 hover:bg-blue-700">
+                <Plus size={20} className="mr-2" />
+                Ajouter un Équipement
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
-              <DialogHeader><DialogTitle>Nouvel Équipement</DialogTitle></DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>Nom *</Label><Input value={form.name} onChange={e => setForm({...form,name:e.target.value})} className="mt-1"/></div>
+              <DialogHeader>
+                <DialogTitle>Ajouter un Équipement</DialogTitle>
+                <DialogDescription>
+                  Enregistrez un nouvel équipement dans le parc
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Type</Label>
-                    <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white mt-1" value={form.type} onChange={e=>setForm({...form,type:e.target.value})}>
-                      {TYPES.map(t=><option key={t} value={t}>{t}</option>)}
-                    </select>
+                    <Label htmlFor="name" className="text-sm font-medium">
+                      Nom <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="name"
+                      placeholder="Ex: Excavatrice CAT 320"
+                      value={formData.name}
+                      onChange={(e) =>
+                        setFormData({ ...formData, name: e.target.value })
+                      }
+                    />
                   </div>
-                </div>
-                <div>
-                  <Label>Site *</Label>
-                  <SearchableSelect options={siteOptions} value={form.siteId}
-                    onChange={v=>setForm({...form,siteId:v,teamId:""})} placeholder="Sélectionner un site..." className="mt-1"/>
-                </div>
-                <div>
-                  <Label>Équipe (optionnel)</Label>
-                  <SearchableSelect options={teamOptions} value={form.teamId}
-                    onChange={v=>setForm({...form,teamId:v})} placeholder="Aucune équipe" className="mt-1"
-                    emptyMsg={form.siteId ? "Aucune équipe pour ce site" : "Sélectionner un site d'abord"}/>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
+
                   <div>
-                    <Label>Statut</Label>
-                    <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white mt-1" value={form.status} onChange={e=>setForm({...form,status:e.target.value})}>
-                      {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
-                    </select>
+                    <Label htmlFor="type" className="text-sm font-medium">
+                      Type <span className="text-red-500">*</span>
+                    </Label>
+                    <Select value={formData.type} onValueChange={(value) =>
+                      setFormData({ ...formData, type: value })
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {EQUIPMENT_TYPES.map((type) => (
+                          <SelectItem key={type} value={type}>
+                            {type}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Coût d'achat ({sym})</Label>
-                    <Input type="number" step="any" min="0" value={form.value} onChange={e=>setForm({...form,value:e.target.value})} className="mt-1" placeholder="0"/>
+                    <Label htmlFor="site" className="text-sm font-medium">
+                      Site
+                    </Label>
+                    <Select value={formData.siteId} onValueChange={(value) =>
+                      setFormData({ ...formData, siteId: value, teamId: "" })
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sites.map((site) => (
+                          <SelectItem key={site.id} value={site.id}>
+                            {site.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="team" className="text-sm font-medium">
+                      Équipe
+                    </Label>
+                    <Select value={formData.teamId} onValueChange={(value) =>
+                      setFormData({ ...formData, teamId: value })
+                    }>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {siteTeams.map((team) => (
+                          <SelectItem key={team.id} value={team.id}>
+                            {team.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label>N° Série</Label><Input value={form.serialNumber} onChange={e=>setForm({...form,serialNumber:e.target.value})} className="mt-1"/></div>
-                  <div><Label>Date d'achat</Label><Input type="date" value={form.purchaseDate} max={new Date().toISOString().split("T")[0]} onChange={e=>setForm({...form,purchaseDate:e.target.value})} className="mt-1"/></div>
-                </div>
-                {parseFloat(form.value) > 0 && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-2 text-xs text-amber-700">
-                    ℹ️ Une dépense de <strong>{fmt(parseFloat(form.value))}</strong> sera automatiquement créée dans l'onglet Dépenses et Résultat Financier.
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="purchaseDate" className="text-sm font-medium">
+                      Date d'Achat
+                    </Label>
+                    <input
+                      id="purchaseDate"
+                      type="date"
+                      value={formData.purchaseDate}
+                      onChange={(e) =>
+                        setFormData({ ...formData, purchaseDate: e.target.value })
+                      }
+                      className="w-full px-3 py-2 border border-slate-300 rounded-md"
+                    />
                   </div>
-                )}
-                <div className="flex gap-3 pt-2">
-                  <Button type="button" variant="outline" onClick={()=>{setForm({name:"",type:"Pioche",siteId:"",teamId:"",status:"Opérationnel",value:"",serialNumber:"",purchaseDate:new Date().toISOString().split("T")[0]});setOpen(false);}} className="flex-1">Annuler</Button>
-                  <Button type="submit" className="flex-1 bg-amber-500 hover:bg-amber-600 text-white">Ajouter</Button>
+
+                  <div>
+                    <Label htmlFor="price" className="text-sm font-medium">
+                      Prix d'Achat (€)
+                    </Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      value={formData.purchasePrice}
+                      onChange={(e) =>
+                        setFormData({ ...formData, purchasePrice: Number(e.target.value) })
+                      }
+                    />
+                  </div>
                 </div>
-              </form>
+
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setOpenDialog(false)}
+                    className="flex-1"
+                  >
+                    Annuler
+                  </Button>
+                  <Button
+                    onClick={handleAddEquipment}
+                    className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  >
+                    Ajouter
+                  </Button>
+                </div>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            {l:"Total équipements",v:equipment.length,c:"text-slate-900"},
-            {l:"Opérationnels",v:operational,c:"text-green-600"},
-            {l:"Hors service",v:equipment.length-operational,c:"text-red-600"},
-            {l:"Valeur totale",v:fmt(totalValue),c:"text-amber-600"},
-          ].map(s=>(
-            <Card key={s.l} className="bg-white"><CardContent className="pt-4">
-              <p className="text-xs text-slate-400">{s.l}</p>
-              <p className={`text-xl font-bold ${s.c}`}>{s.v}</p>
-            </CardContent></Card>
-          ))}
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="bg-white">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    Total Équipements
+                  </p>
+                  <p className="text-3xl font-bold text-slate-900">
+                    {totalEquipments}
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600">
+                  <Wrench size={24} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    Opérationnel
+                  </p>
+                  <p className="text-3xl font-bold text-green-600">
+                    {operationalCount}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {((operationalCount / totalEquipments) * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-green-600">
+                  <CheckCircle size={24} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    En Maintenance
+                  </p>
+                  <p className="text-3xl font-bold text-yellow-600">
+                    {maintenanceCount}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    {((maintenanceCount / totalEquipments) * 100).toFixed(0)}%
+                  </p>
+                </div>
+                <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-yellow-600">
+                  <Clock size={24} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white">
+            <CardContent className="pt-6">
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="text-sm font-medium text-slate-600 mb-2">
+                    Valeur Totale
+                  </p>
+                  <p className="text-3xl font-bold text-slate-900">
+                    {Math.round(totalValue / 1000)}k
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">€</p>
+                </div>
+                <div className="w-12 h-12 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600">
+                  <Wrench size={24} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filters */}
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-48">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"/>
-            <Input placeholder="Rechercher..." value={search} onChange={e=>{setSearch(e.target.value);setPage(1);}} className="pl-9"/>
-          </div>
-          <select value={filterSite} onChange={e=>{setFilterSite(e.target.value);setPage(1);}} className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
-            <option value="all">Tous les sites</option>
-            {sites.map((s:any)=><option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
-          <select value={filterStatus} onChange={e=>{setFilterStatus(e.target.value);setPage(1);}} className="border border-slate-300 rounded-lg px-3 py-2 text-sm bg-white">
-            <option value="all">Tous statuts</option>
-            {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
-          </select>
-        </div>
-
-        {/* Table */}
         <Card className="bg-white">
-          <CardHeader><CardTitle className="text-base">Liste des Équipements <span className="text-sm font-normal text-slate-400">({filtered.length})</span></CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>Filtres</CardTitle>
+          </CardHeader>
           <CardContent>
-            <table className="w-full text-sm">
-              <thead className="border-b border-slate-100">
-                <tr>{["Nom","Type","Site","Équipe","Statut","N° Série","Date Achat","Coût","Dépense liée","Actions"].map(h=>(
-                  <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody>
-                {paginated.length===0?<tr><td colSpan={10} className="text-center py-8 text-slate-400">Aucun équipement</td></tr>:
-                paginated.map((eq:any)=>{
-                  const site=sites.find((s:any)=>s.id===eq.siteId);
-                  const team=teams.find((t:any)=>t.id===eq.teamId);
-                  const linkedExp=(data?.expenses||[]).find((ex:any)=>ex.equipmentId===eq.id || (ex.category==="Équipement"&&ex.comment?.includes(eq.name)));
-                  return(
-                    <tr key={eq.id} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="py-2 px-3 font-medium">{eq.name}</td>
-                      <td className="py-2 px-3 text-xs"><span className="bg-slate-100 px-2 py-0.5 rounded">{eq.type}</span></td>
-                      <td className="py-2 px-3 text-xs text-slate-500">{site?.name||"—"}</td>
-                      <td className="py-2 px-3 text-xs text-slate-400">{team?.name||"—"}</td>
-                      <td className="py-2 px-3">
-                        <div className="flex items-center gap-1">
-                          {statusIcon(eq.status)}
-                          <select value={eq.status} onChange={e=>{updateEquipment?.(eq.id,{status:e.target.value});toast.success("Statut mis à jour");}}
-                            className={`text-xs px-1.5 py-0.5 rounded-full border-0 font-medium cursor-pointer ${statusColor(eq.status)}`}>
-                            {STATUSES.map(s=><option key={s} value={s}>{s}</option>)}
-                          </select>
-                        </div>
-                      </td>
-                      <td className="py-2 px-3 text-xs text-slate-400">{eq.serialNumber||"—"}</td>
-                      <td className="py-2 px-3 text-xs">{eq.purchaseDate||"—"}</td>
-                      <td className="py-2 px-3 font-bold text-amber-600">{fmt(eq.value||0)}</td>
-                      <td className="py-2 px-3">
-                        {linkedExp ? (
-                          <span className="text-xs text-green-600 flex items-center gap-1">✓ {fmt(linkedExp.amount)}</span>
-                        ) : (eq.value||0) > 0 ? (
-                          <span className="text-xs text-slate-300">—</span>
-                        ) : <span className="text-xs text-slate-300">Gratuit</span>}
-                      </td>
-                      <td className="py-2 px-3">
-                        {user?.role==="admin"&&<button onClick={()=>setDelId(eq.id)} className="text-red-400 hover:text-red-600"><Trash2 size={14}/></button>}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <Pagination total={total} page={page} perPage={perPage} onPageChange={setPage} onPerPageChange={setPerPage}/>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Site
+                </label>
+                <Select value={selectedSite} onValueChange={setSelectedSite}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les sites" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les sites</SelectItem>
+                    {sites.map((site) => (
+                      <SelectItem key={site.id} value={site.id}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Statut
+                </label>
+                <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tous les statuts" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    {EQUIPMENT_STATUS.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
           </CardContent>
         </Card>
 
-        <AlertDialog open={!!delId} onOpenChange={o=>!o&&setDelId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Supprimer cet équipement ?</AlertDialogTitle>
-              <AlertDialogDescription>La dépense liée sera aussi supprimée. Action irréversible.</AlertDialogDescription>
-            </AlertDialogHeader>
-            <div className="flex gap-3 justify-end mt-2">
-              <AlertDialogCancel>Annuler</AlertDialogCancel>
-              <AlertDialogAction onClick={()=>delId&&handleDelete(delId)} className="bg-red-600 hover:bg-red-700">Supprimer</AlertDialogAction>
+        {/* Equipments Table */}
+        <Card className="bg-white">
+          <CardHeader>
+            <CardTitle>Équipements ({filteredEquipments.length})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="border-b border-slate-200">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Nom
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Type
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Site
+                    </th>
+                    <th className="text-left py-3 px-4 font-semibold text-slate-900">
+                      Date d'Achat
+                    </th>
+                    <th className="text-right py-3 px-4 font-semibold text-slate-900">
+                      Valeur
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900">
+                      Statut
+                    </th>
+                    <th className="text-center py-3 px-4 font-semibold text-slate-900">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEquipments.map((eq) => {
+                    const site = sites.find((s) => s.id === eq.siteId);
+                    return (
+                      <tr key={eq.id} className="border-b border-slate-100 hover:bg-slate-50">
+                        <td className="py-3 px-4 font-medium text-slate-900">
+                          {eq.name}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">{eq.type}</td>
+                        <td className="py-3 px-4 text-slate-600 text-xs">
+                          {site?.name}
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          {new Date(eq.purchaseDate).toLocaleDateString("fr-FR")}
+                        </td>
+                        <td className="py-3 px-4 text-right font-medium text-slate-900">
+                          <CurrencyDisplay amount={eq.purchasePrice / 1000} decimals={0} />
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {getStatusIcon(eq.status)}
+                            <Select
+                              value={eq.status}
+                              onValueChange={(value) =>
+                                handleUpdateStatus(eq.id, value as Equipment["status"])
+                              }
+                            >
+                              <SelectTrigger className="w-32 h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {EQUIPMENT_STATUS.map((status) => (
+                                  <SelectItem key={status.value} value={status.value}>
+                                    {status.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteEquipment(eq.id)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Supprimer
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
-          </AlertDialogContent>
-        </AlertDialog>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );

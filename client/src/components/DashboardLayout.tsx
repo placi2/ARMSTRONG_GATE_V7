@@ -6,7 +6,7 @@ import { ROLE_NAV, ROLE_LABELS, ROLE_COLORS } from "@/contexts/AuthContext";
 import {
   LayoutDashboard, MapPin, Users, UserCheck, Scale, DollarSign,
   Landmark, BarChart2, History, Package, Settings, TrendingUp,
-  GitCompare, FileText, LogOut, ChevronLeft, ChevronRight, Building2,
+  GitCompare, FileText, LogOut, ChevronLeft, ChevronRight, Building2, ClipboardList,
 } from "lucide-react";
 
 const ALL_NAV = [
@@ -26,6 +26,7 @@ const ALL_NAV = [
   { path:"/weekly-reports",      label:"Rapports Hebdo",       icon:FileText        },
   { path:"/custom-reports",      label:"Rapports PDF",         icon:FileText        },
   { path:"/settings",            label:"Paramètres",           icon:Settings        },
+  { path:"/audit",                label:"Journal d'Audit",      icon:ClipboardList   },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
