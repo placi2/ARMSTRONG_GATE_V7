@@ -1,119 +1,114 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLogo } from "@/contexts/LogoContext";
 import { useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
   const { login } = useAuth();
-  const { logoEmoji, logoColor } = useLogo();
-  const [, navigate] = useLocation();
+  const [, nav]   = useLocation();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Read logo saved in localStorage by Settings
+  const logo = (() => {
+    try {
+      const d = localStorage.getItem("ag_logo_image");
+      if (d) return d;
+      const v = localStorage.getItem("ag_logo_v3");
+      if (v) { const p = JSON.parse(v); if (p.image) return p.image; }
+      const s = localStorage.getItem("ag_settings");
+      if (s) { const p = JSON.parse(s); if (p.customLogo) return p.customLogo; }
+    } catch {}
+    return null;
+  })();
+
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      toast.error("Veuillez remplir tous les champs");
-      return;
-    }
-
-    setIsLoading(true);
+    if (!email || !password) { toast.error("Veuillez remplir tous les champs"); return; }
+    setLoading(true);
     try {
       await login(email, password);
       toast.success("Connexion réussie");
-      navigate("/");
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Erreur de connexion"
-      );
-    } finally {
-      setIsLoading(false);
-    }
+      nav("/");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Erreur de connexion");
+    } finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 to-slate-800 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className={`inline-flex items-center justify-center w-16 h-16 ${logoColor} rounded-lg mb-4`}>
-            <span className="text-3xl">{logoEmoji}</span>
+    <div className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)" }}>
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
+
+        <div className="px-10 py-10">
+          {/* Logo */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-20 h-20 rounded-2xl overflow-hidden mb-4 shadow-lg bg-white flex items-center justify-center border border-slate-100">
+              {logo
+                ? <img src={logo} alt="Armstrong Gate" className="w-full h-full object-cover"/>
+                : <span style={{ fontSize: 40, lineHeight: 1 }}>⛏</span>
+              }
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-wide">ARMSTRONG GATE</h1>
+            <p className="text-slate-400 text-sm mt-1">Gestion d'Exploitation Aurifère</p>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">AMSTRONG GATE</h1>
-          <p className="text-slate-400">Gestion d'Exploitation Aurifère</p>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200"/>
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-white px-4 text-sm text-slate-400">Connexion</span>
+            </div>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={submit} className="space-y-5">
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1.5">Email</label>
+              <Input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="admin@goldmine.com"
+                disabled={loading}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white text-slate-800"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-800 mb-1.5">Mot de passe</label>
+              <Input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                disabled={loading}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 focus:bg-white text-slate-800"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full h-12 rounded-xl font-semibold text-white text-sm transition-all hover:opacity-90 active:scale-[0.99] disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
+              style={{ backgroundColor: "#2563eb" }}
+            >
+              {loading
+                ? <><Loader2 className="w-4 h-4 animate-spin"/>Connexion en cours...</>
+                : "Se connecter"
+              }
+            </button>
+          </form>
+
+          {/* Footer */}
+          <p className="text-center text-slate-300 text-xs mt-8">
+            © 2026 ARMSTRONG GATE
+          </p>
         </div>
-
-        {/* Login Card */}
-        <Card className="bg-white shadow-2xl">
-          <CardHeader>
-            <CardTitle className="text-center text-2xl">Connexion</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Email */}
-              <div className="space-y-2">
-                <label htmlFor="email" className="block text-sm font-medium text-slate-900">
-                  Email
-                </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@goldmine.com"
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Password */}
-              <div className="space-y-2">
-                <label htmlFor="password" className="block text-sm font-medium text-slate-900">
-                  Mot de passe
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  disabled={isLoading}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-amber-500 hover:bg-amber-600 text-white font-semibold py-2"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Connexion en cours...
-                  </>
-                ) : (
-                  "Se connecter"
-                )}
-              </Button>
-            </form>
-
-
-          </CardContent>
-        </Card>
-
-        {/* Footer */}
-        <p className="text-center text-slate-400 text-sm mt-6">
-          Application de gestion d'exploitation aurifère
-        </p>
       </div>
     </div>
   );
