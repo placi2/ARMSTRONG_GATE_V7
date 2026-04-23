@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAudit } from "@/contexts/AuditContext";
+import { isConfigured, readFromCloud, writeToCloud, collectLocalData, applyCloudData } from "@/lib/jsonbin";
 import type { UserRole } from "./AuthContext";
 
 export interface Site        { id:string; name:string; location:string; description?:string; status?:string; manager?:string; }
@@ -65,16 +66,72 @@ export function DataProvider({children}:{children:React.ReactNode}) {
   const [gS,setGS]=useState<GoldStock[]>(()=>load(K.gold,[]));
   const [aU,setAU]=useState<AppUser[]>(()=>load(K.users,IU));
 
-  useEffect(()=>{save(K.sites,aS);},[aS]);
-  useEffect(()=>{save(K.teams,aT);},[aT]);
-  useEffect(()=>{save(K.employees,aE);},[aE]);
-  useEffect(()=>{save(K.productions,aP);},[aP]);
-  useEffect(()=>{save(K.expenses,aX);},[aX]);
-  useEffect(()=>{save(K.cash,aC);},[aC]);
-  useEffect(()=>{save(K.eq,aQ);},[aQ]);
-  useEffect(()=>{save(K.adv,aV);},[aV]);
-  useEffect(()=>{save(K.gold,gS);},[gS]);
-  useEffect(()=>{save(K.users,aU);},[aU]);
+  // ── Track if initial cloud load is done ───────────────────────────────────
+  const [cloudReady, setCloudReady] = useState(false);
+
+  // ── Load from JSONBin on mount (overrides localStorage with shared data) ──
+  useEffect(() => {
+    if (!isConfigured()) { setCloudReady(true); return; }
+    readFromCloud().then(cloud => {
+      if (cloud) {
+        applyCloudData(cloud);
+        // Reload state from localStorage (now updated from cloud)
+        if (cloud.ag_sites?.length)        setAS(cloud.ag_sites);
+        if (cloud.ag_teams?.length)        setAT(cloud.ag_teams);
+        if (cloud.ag_employees?.length)    setAE(cloud.ag_employees);
+        if (cloud.ag_productions?.length)  setAP(cloud.ag_productions);
+        if (cloud.ag_expenses?.length)     setAX(cloud.ag_expenses);
+        if (cloud.ag_cashMovements?.length)setAC(cloud.ag_cashMovements);
+        if (cloud.ag_equipment?.length)    setAQ(cloud.ag_equipment);
+        if (cloud.ag_advances?.length)     setAV(cloud.ag_advances);
+        if (cloud.ag_goldStocks?.length)   setGS(cloud.ag_goldStocks);
+        if (cloud.ag_appUsers?.length)     setAU(cloud.ag_appUsers);
+        console.log("[JSONBin] ✅ Data loaded from cloud");
+      }
+      setCloudReady(true);
+    });
+  }, []); // run once on mount
+
+  // ── Auto-sync every 30 seconds (picks up other users' changes) ────────────
+  useEffect(() => {
+    if (!isConfigured()) return;
+    const interval = setInterval(() => {
+      readFromCloud().then(cloud => {
+        if (!cloud) return;
+        // Only update if cloud has more recent/more data
+        if (cloud.ag_sites?.length > aS.length)        setAS(cloud.ag_sites);
+        if (cloud.ag_teams?.length > aT.length)        setAT(cloud.ag_teams);
+        if (cloud.ag_employees?.length > aE.length)    setAE(cloud.ag_employees);
+        if (cloud.ag_productions?.length > aP.length)  setAP(cloud.ag_productions);
+        if (cloud.ag_expenses?.length > aX.length)     setAX(cloud.ag_expenses);
+        if (cloud.ag_cashMovements?.length > aC.length)setAC(cloud.ag_cashMovements);
+        if (cloud.ag_equipment?.length > aQ.length)    setAQ(cloud.ag_equipment);
+        if (cloud.ag_advances?.length > aV.length)     setAV(cloud.ag_advances);
+        if (cloud.ag_appUsers?.length > aU.length)     setAU(cloud.ag_appUsers);
+      });
+    }, 30000); // 30 seconds
+    return () => clearInterval(interval);
+  }, [aS.length, aT.length, aE.length, aP.length, aX.length, aC.length, aQ.length, aV.length, aU.length]);
+
+  // ── Push to cloud after every local save ──────────────────────────────────
+  const pushToCloud = useCallback(() => {
+    if (!isConfigured() || !cloudReady) return;
+    setTimeout(() => {
+      writeToCloud(collectLocalData());
+    }, 500); // small delay to let localStorage settle
+  }, [cloudReady]);
+
+  // ── Save to localStorage + push to cloud ──────────────────────────────────
+  useEffect(()=>{save(K.sites,aS);    if(cloudReady) pushToCloud();},[aS]);
+  useEffect(()=>{save(K.teams,aT);    if(cloudReady) pushToCloud();},[aT]);
+  useEffect(()=>{save(K.employees,aE);if(cloudReady) pushToCloud();},[aE]);
+  useEffect(()=>{save(K.productions,aP);if(cloudReady) pushToCloud();},[aP]);
+  useEffect(()=>{save(K.expenses,aX); if(cloudReady) pushToCloud();},[aX]);
+  useEffect(()=>{save(K.cash,aC);     if(cloudReady) pushToCloud();},[aC]);
+  useEffect(()=>{save(K.eq,aQ);       if(cloudReady) pushToCloud();},[aQ]);
+  useEffect(()=>{save(K.adv,aV);      if(cloudReady) pushToCloud();},[aV]);
+  useEffect(()=>{save(K.gold,gS);     if(cloudReady) pushToCloud();},[gS]);
+  useEffect(()=>{save(K.users,aU);    if(cloudReady) pushToCloud();},[aU]);
 
   // ── Audit helper ─────────────────────────────────────────────────────────
   const audit = useCallback((action:"CREATE"|"UPDATE"|"DELETE", module:any, itemId:string, itemName:string, details:string, siteId?:string) => {
