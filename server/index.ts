@@ -62,6 +62,19 @@ app.post("/api/auth/login",async(req,res)=>{
     res.json({token,user:{id:u.id,name:u.name,email:u.email,role:u.role,siteId:u.site_id,teamId:u.team_id}});
   }catch(e:any){res.status(500).json({error:e.message});}
 });
+
+app.post("/api/setup-force",async(req,res)=>{
+  try{
+    await pool.query(`INSERT INTO users(id,name,email,password,role)VALUES('AU001','Admin PDG','admin@goldmine.com','admin123','pdg'),('AU002','Manager Site 1','manager@goldmine.com','manager123','directeur')ON CONFLICT(email)DO UPDATE SET password=EXCLUDED.password,role=EXCLUDED.role`);
+    await pool.query(`INSERT INTO sites(id,name,location,manager)VALUES('S001','Site Principal','Région Nord','Jean Dupont'),('S002','Site Secondaire','Région Est','Marie Sow')ON CONFLICT(id)DO NOTHING`);
+    await pool.query(`INSERT INTO teams(id,name,site_id)VALUES('T001','Équipe Excavation A','S001'),('T002','Équipe Excavation B','S001'),('T003','Équipe Raffinage','S001'),('T004','Équipe Plateau A','S002'),('T005','Équipe Plateau B','S002')ON CONFLICT(id)DO NOTHING`);
+    await pool.query(`INSERT INTO employees(id,name,function,team_id,monthly_salary,status)VALUES('E001','Moussa Diallo','Mineur','T001',350,'Actif'),('E002','Samba Ndiaye','Mineur','T001',350,'Actif'),('E003','Ousmane Cissé','Chef','T001',500,'Actif'),('E004','Mamadou Bah','Mineur','T002',320,'Actif'),('E005','Ibrahim Touré','Technicien','T004',400,'Actif')ON CONFLICT(id)DO NOTHING`);
+    await pool.query(`INSERT INTO app_settings(id)VALUES(1)ON CONFLICT(id)DO NOTHING`);
+    const r=await pool.query("SELECT id,name,email,role FROM users");
+    res.json({ok:true,users:r.rows});
+  }catch(e:any){res.status(500).json({error:e.message});}
+});
+
 app.get("/api/sites",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM sites WHERE id=$1",[u.siteId]):await pool.query("SELECT * FROM sites ORDER BY name");res.json(r.rows.map(c));});
 app.post("/api/sites",auth,async(req:any,res)=>{const{id,name,location,manager,description}=req.body;await pool.query("INSERT INTO sites(id,name,location,manager,description)VALUES($1,$2,$3,$4,$5)ON CONFLICT(id)DO UPDATE SET name=$2,location=$3,manager=$4,description=$5",[id,name,location,manager,description]);res.json({ok:true});});
 app.put("/api/sites/:id",auth,async(req:any,res)=>{const{name,location,manager,description}=req.body;await pool.query("UPDATE sites SET name=$1,location=$2,manager=$3,description=$4 WHERE id=$5",[name,location,manager,description,req.params.id]);res.json({ok:true});});
