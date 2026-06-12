@@ -12,6 +12,7 @@ import { MapPin, Users, TrendingUp, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Sites() {
+  const rbac = useRbac();
   const { sites, teams } = useData();
   const siteMetrics = sites.map((site) => ({
     ...site,
@@ -32,7 +33,7 @@ export default function Sites() {
               Suivi de tous les sites d'exploitation
             </p>
           </div>
-          <AddSiteForm />
+          {rbac.canAddSite && <AddSiteForm />}
         </div>
 
         {/* Sites Grid */}
