@@ -47,6 +47,17 @@ export default function Dashboard() {
   const { sites, teams, productions, expenses, cashMovements, employees } = useData();
   const { settings, fmt, sym, goldPrice } = useSafeSettings();
   const { user } = useAuth();
+  const rbac = useRbac();
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    if (user && !rbac.canViewDashboard) {
+      const firstRoute = ROLE_NAV[user.role]?.[0] || "/employees";
+      setLocation(firstRoute);
+    }
+  }, [user, rbac.canViewDashboard]);
+
+  if (user && !rbac.canViewDashboard) return null;
 
   const [dateFrom, setDateFrom] = useState(
     new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0]
