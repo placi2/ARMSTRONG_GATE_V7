@@ -6,6 +6,7 @@ import cors from"cors";
 import jwt from"jsonwebtoken";
 import pg from"pg";
 const{Pool}=pg;
+import { setupRequestsRoutes, createRequestsTable } from "./routes-requests.js";
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const app=express();
 app.use(cors());
@@ -22,7 +23,7 @@ function auth(req:any,res:any,next:any){
   catch{res.status(401).json({error:"Token invalide"});}
 }
 function c(row:any){
-  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt"};
+  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt",requested_by:"requestedBy",requested_by_name:"requestedByName",updated_at:"updatedAt"};
   const out:any={};
   for(const[k,v]of Object.entries(row))out[m[k]||k]=v;
   if(out.estimatedValue!==undefined)out.value=parseFloat(out.estimatedValue)||0;
@@ -42,6 +43,7 @@ async function initDB(){
     CREATE TABLE IF NOT EXISTS advances(id TEXT PRIMARY KEY,employee_id TEXT,date TEXT,amount NUMERIC,motif TEXT,status TEXT DEFAULT 'Validé',created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE IF NOT EXISTS app_settings(id INTEGER PRIMARY KEY DEFAULT 1,gold_price_usd NUMERIC DEFAULT 65,currency TEXT DEFAULT 'USD',exchange_rate_cdf NUMERIC DEFAULT 2800,company_name TEXT DEFAULT 'ARMSTRONG GATE',custom_logo TEXT,updated_at TIMESTAMPTZ DEFAULT NOW());
   `);
+  await createRequestsTable(pool);
   const{rowCount}=await pool.query("SELECT id FROM users LIMIT 1");
   if(!rowCount){
     await pool.query(`INSERT INTO users(id,name,email,password,role)VALUES('AU001','Admin PDG','admin@goldmine.com','admin123','pdg'),('AU002','Manager Site 1','manager@goldmine.com','manager123','directeur')ON CONFLICT DO NOTHING`);
@@ -49,6 +51,7 @@ async function initDB(){
     await pool.query(`INSERT INTO teams(id,name,site_id)VALUES('T001','Équipe Excavation A','S001'),('T002','Équipe Excavation B','S001'),('T003','Équipe Raffinage','S001'),('T004','Équipe Plateau A','S002'),('T005','Équipe Plateau B','S002')ON CONFLICT DO NOTHING`);
     await pool.query(`INSERT INTO employees(id,name,function,team_id,monthly_salary,status)VALUES('E001','Moussa Diallo','Mineur','T001',350,'Actif'),('E002','Samba Ndiaye','Mineur','T001',350,'Actif'),('E003','Ousmane Cissé','Chef','T001',500,'Actif'),('E004','Mamadou Bah','Mineur','T002',320,'Actif'),('E005','Ibrahim Touré','Technicien','T004',400,'Actif')ON CONFLICT DO NOTHING`);
     await pool.query(`INSERT INTO app_settings(id)VALUES(1)ON CONFLICT DO NOTHING`);
+
   }
   console.log("✅ DB ready");
 }
@@ -108,6 +111,7 @@ app.post("/api/users",auth,async(req:any,res)=>{const{id,name,email,password,rol
 app.delete("/api/users/:id",auth,async(req,res)=>{await pool.query("DELETE FROM users WHERE id=$1",[req.params.id]);res.json({ok:true});});
 app.get("/api/settings",async(req,res)=>{const r=await pool.query("SELECT * FROM app_settings WHERE id=1");const s=r.rows[0]||{};res.json({goldPriceUsd:parseFloat(s.gold_price_usd)||65,goldPrice:parseFloat(s.gold_price_usd)||65,currency:s.currency||"USD",exchangeRateCdf:parseFloat(s.exchange_rate_cdf)||2800,exchangeRate:parseFloat(s.exchange_rate_cdf)||2800,companyName:s.company_name||"ARMSTRONG GATE",customLogo:s.custom_logo||null});});
 app.put("/api/settings",auth,async(req:any,res)=>{const{goldPriceUsd,currency,exchangeRateCdf,companyName,customLogo}=req.body;await pool.query("INSERT INTO app_settings(id,gold_price_usd,currency,exchange_rate_cdf,company_name,custom_logo)VALUES(1,$1,$2,$3,$4,$5)ON CONFLICT(id)DO UPDATE SET gold_price_usd=$1,currency=$2,exchange_rate_cdf=$3,company_name=$4,custom_logo=$5,updated_at=NOW()",[goldPriceUsd,currency,exchangeRateCdf,companyName,customLogo||null]);res.json({ok:true});});
+setupRequestsRoutes(app, pool, auth, c);
 const staticPath=path.resolve(__dirname,"public");
 app.use(express.static(staticPath));
 app.get("*",(_,res)=>res.sendFile(path.join(staticPath,"index.html")));
