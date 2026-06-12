@@ -16,6 +16,7 @@ export const api={
   getCash:()=>r<any[]>("GET","/cash"),createCash:(m:any)=>r<any>("POST","/cash",m),deleteCash:(id:string)=>r<any>("DELETE",`/cash/${id}`),
   getEquipment:()=>r<any[]>("GET","/equipment"),createEquipment:(e:any)=>r<any>("POST","/equipment",e),updateEquipment:(id:string,e:any)=>r<any>("PUT",`/equipment/${id}`,e),deleteEquipment:(id:string)=>r<any>("DELETE",`/equipment/${id}`),
   getAdvances:()=>r<any[]>("GET","/advances"),createAdvance:(a:any)=>r<any>("POST","/advances",a),deleteAdvance:(id:string)=>r<any>("DELETE",`/advances/${id}`),
+  getRequests:()=>r<any[]>("GET","/requests"),createRequest:(d:any)=>r<any>("POST","/requests",d),updateRequestStatus:(id:string,status:string)=>r<any>("PUT",`/requests/${id}`,{status}),
   getUsers:()=>r<any[]>("GET","/users"),createUser:(u:any)=>r<any>("POST","/users",u),deleteUser:(id:string)=>r<any>("DELETE",`/users/${id}`),
   getSettings:()=>r<any>("GET","/settings"),updateSettings:(s:any)=>r<any>("PUT","/settings",s),
 };

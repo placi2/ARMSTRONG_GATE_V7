@@ -23,6 +23,7 @@ interface Ctx{
   addCashMovement:(m:Omit<CashMovement,"id">)=>Promise<void>;updateCashMovement:(id:string,m:Partial<CashMovement>)=>Promise<void>;deleteCashMovement:(id:string)=>Promise<void>;
   addEquipment:(e:any)=>Promise<void>;updateEquipment:(id:string,e:Partial<Equipment>)=>Promise<void>;deleteEquipment:(id:string)=>Promise<void>;
   addAdvance:(a:Omit<Advance,"id">)=>Promise<void>;deleteAdvance:(id:string)=>Promise<void>;
+  requests:any[];addRequest:(r:any)=>Promise<void>;updateRequestStatus:(id:string,status:string)=>Promise<void>;
   updateGoldStock:(siteId:string,delta:number,isProd:boolean)=>void;
   addAppUser:(u:any)=>Promise<AppUser>;updateAppUser:(id:string,u:Partial<AppUser>)=>Promise<void>;deleteAppUser:(id:string)=>Promise<void>;
 }
@@ -39,20 +40,22 @@ export function DataProvider({children}:{children:React.ReactNode}){
   const[equipment,setEquipment]=useState<Equipment[]>([]);
   const[advances,setAdvances]=useState<Advance[]>([]);
   const[appUsers,setAppUsers]=useState<AppUser[]>([]);
+  const[requests,setRequests]=useState<any[]>([]);
   const[loading,setLoading]=useState(false);
   const load=useCallback(async()=>{
     if(!isAuthenticated)return;
     setLoading(true);
     try{
-      const[s,t,e,p,x,c,q,v,u]=await Promise.all([
+      const[s,t,e,p,x,c,q,v,u,rq]=await Promise.all([
         api.getSites(),api.getTeams(),api.getEmployees(),
         api.getProductions(),api.getExpenses(),api.getCash(),
         api.getEquipment(),api.getAdvances(),
         api.getUsers().catch(()=>[]),
+        api.getRequests().catch(()=>[]),
       ]);
       setSites(s);setTeams(t);setEmployees(e);
       setProductions(p);setExpenses(x);setCash(c);
-      setEquipment(q);setAdvances(v);setAppUsers(u);
+      setEquipment(q);setAdvances(v);setAppUsers(u);setRequests(rq);
     }catch(err){console.error("Load error:",err);}
     finally{setLoading(false);}
   },[isAuthenticated]);
@@ -85,6 +88,8 @@ export function DataProvider({children}:{children:React.ReactNode}){
   const deleteEquipment=useCallback(async(id:string)=>{await api.deleteEquipment(id);await load();},[load]);
   const addAdvance=useCallback(async(a:Omit<Advance,"id">)=>{await api.createAdvance({...a,id:`AV${uid()}`,status:"Validé"});await load();},[load]);
   const deleteAdvance=useCallback(async(id:string)=>{await api.deleteAdvance(id);await load();},[load]);
+  const addRequest=useCallback(async(req:any)=>{await api.createRequest({...req,id:`REQ${uid()}`});await load();},[load]);
+  const updateRequestStatus=useCallback(async(id:string,status:string)=>{await api.updateRequestStatus(id,status);await load();},[load]);
   const updateGoldStock=useCallback(()=>{},[]);
   const addAppUser=useCallback(async(u:any):Promise<AppUser>=>{const n={...u,id:`AU${uid()}`,createdAt:new Date().toISOString().split("T")[0]};await api.createUser(n);await load();return n;},[load]);
   const updateAppUser=useCallback(async(_id:string,_u:Partial<AppUser>)=>{await load();},[load]);
@@ -96,7 +101,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
     loading,addSite,updateSite,deleteSite,addTeam,updateTeam,deleteTeam,
     addEmployee,updateEmployee,deleteEmployee,addProduction,updateProduction,deleteProduction,
     addExpense,updateExpense,deleteExpense,addCashMovement,updateCashMovement,deleteCashMovement,
-    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,
+    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,requests,addRequest,updateRequestStatus,
     addAppUser,updateAppUser,deleteAppUser,
   }}>{children}</DataContext.Provider>;
 }

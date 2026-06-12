@@ -22,13 +22,13 @@ export const ROLE_COLORS:Record<UserRole,string> = {
   equipements:"bg-gray-100 text-gray-800",logistique:"bg-cyan-100 text-cyan-800",auditeur:"bg-slate-100 text-slate-700",
 };
 export const ROLE_NAV:Record<UserRole,string[]> = {
-  pdg:["/","/sites","/teams","/employees","/production","/expenses","/cash","/site-cash","/equipment","/financial","/transaction-history","/comparison","/performance-comparison","/weekly-reports","/custom-reports","/settings","/audit"],
+  pdg:["/","/sites","/teams","/employees","/production","/expenses","/cash","/site-cash","/equipment","/financial","/transaction-history","/comparison","/performance-comparison","/weekly-reports","/custom-reports","/settings","/audit","/requests"],
   directeur:["/","/teams","/employees","/production","/expenses","/cash","/equipment","/financial","/transaction-history","/weekly-reports","/custom-reports"],
-  rh:["/employees","/teams"],
-  finance:["/","/financial","/cash","/site-cash","/expenses","/transaction-history","/weekly-reports","/custom-reports"],
+  rh:["/employees","/teams","/requests"],
+  finance:["/","/financial","/cash","/site-cash","/expenses","/transaction-history","/weekly-reports","/custom-reports","/requests"],
   chef_equipe:["/production","/equipment"],
   equipements:["/equipment","/expenses"],
-  logistique:["/sites","/production","/equipment","/expenses"],
+  logistique:["/sites","/production","/equipment","/expenses","/requests"],
   auditeur:["/sites","/teams","/employees","/production","/expenses","/cash","/financial","/equipment","/weekly-reports","/custom-reports"],
 };
 

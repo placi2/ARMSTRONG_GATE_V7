@@ -30,6 +30,7 @@ import WeeklyReports from "./pages/WeeklyReports";
 import CustomReports from "./pages/CustomReports";
 import Settings from "./pages/Settings";
 import AuditHistory from "./pages/AuditHistory";
+import Requests from "./pages/Requests";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -57,6 +58,7 @@ function Router() {
       <Route path="/custom-reports"         component={() => <ProtectedRoute><CustomReports /></ProtectedRoute>} />
       <Route path="/settings"               component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/audit"                  component={() => <ProtectedRoute><AuditHistory /></ProtectedRoute>} />
+      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} />
       <Route component={NotFound} />
     </Switch>
   );

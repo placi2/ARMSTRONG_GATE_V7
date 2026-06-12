@@ -3,10 +3,11 @@ import { Link, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/contexts/SettingsContext";
 import { ROLE_NAV, ROLE_LABELS, ROLE_COLORS } from "@/contexts/AuthContext";
+import { useData } from "@/contexts/DataContext";
 import {
   LayoutDashboard, MapPin, Users, UserCheck, Scale, DollarSign,
   Landmark, BarChart2, History, Package, Settings, TrendingUp,
-  GitCompare, FileText, LogOut, ChevronLeft, ChevronRight, Building2, ClipboardList,
+  GitCompare, FileText, LogOut, ChevronLeft, ChevronRight, Building2, ClipboardList, Bell,
 } from "lucide-react";
 
 const ALL_NAV = [
@@ -44,6 +45,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const visibleNav = ALL_NAV.filter(n => allowedPaths.includes(n.path));
   const roleLabel = role ? ROLE_LABELS[role] : "";
   const roleColor = role ? ROLE_COLORS[role] : "";
+  const { requests } = useData();
+  const pendingCount = requests.filter((req: any) => req.status === "en_attente").length;
+  const showBell = role && ["pdg","rh","finance","logistique"].includes(role);
 
   // Site name for scoped roles
   const siteName = user?.siteId
@@ -139,6 +143,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {new Date().toLocaleDateString("fr-FR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
           </p>
           <div className="flex items-center gap-3">
+            {showBell && (<Link href="/requests"><a className="relative p-2 rounded-full hover:bg-slate-100"><Bell size={18} className="text-slate-600" />{pendingCount > 0 && (<span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{pendingCount}</span>)}</a></Link>)}
             {!canWrite && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">Lecture seule</span>}
             <span className="text-sm text-slate-600 hidden sm:block">{user?.name}</span>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
