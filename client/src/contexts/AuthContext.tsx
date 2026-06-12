@@ -24,12 +24,12 @@ export const ROLE_COLORS:Record<UserRole,string> = {
 export const ROLE_NAV:Record<UserRole,string[]> = {
   pdg:["/","/sites","/teams","/employees","/production","/expenses","/cash","/site-cash","/equipment","/financial","/transaction-history","/comparison","/performance-comparison","/weekly-reports","/custom-reports","/settings","/audit"],
   directeur:["/","/teams","/employees","/production","/expenses","/cash","/equipment","/financial","/transaction-history","/weekly-reports","/custom-reports"],
-  rh:["/","/employees","/teams"],
+  rh:["/employees","/teams"],
   finance:["/","/financial","/cash","/site-cash","/expenses","/transaction-history","/weekly-reports","/custom-reports"],
-  chef_equipe:["/","/production","/equipment"],
-  equipements:["/","/equipment","/expenses"],
-  logistique:["/","/sites","/production","/equipment","/expenses"],
-  auditeur:["/","/sites","/teams","/employees","/production","/expenses","/cash","/financial","/equipment","/weekly-reports","/custom-reports"],
+  chef_equipe:["/production","/equipment"],
+  equipements:["/equipment","/expenses"],
+  logistique:["/sites","/production","/equipment","/expenses"],
+  auditeur:["/sites","/teams","/employees","/production","/expenses","/cash","/financial","/equipment","/weekly-reports","/custom-reports"],
 };
 
 export function AuthProvider({children}:{children:ReactNode}) {

@@ -5,6 +5,10 @@ import { Button } from "@/components/ui/button";
 import { useData } from "@/contexts/DataContext";
 import { useSettings } from "@/contexts/SettingsContext";
 import { useAuth } from "@/hooks/useAuth";
+import { useRbac } from "@/hooks/useRbac";
+import { useLocation } from "wouter";
+import { useEffect } from "react";
+import { ROLE_NAV } from "@/contexts/AuthContext";
 import { calcGlobalMetrics, calcTeamMetrics, calcSiteMetrics } from "@/lib/calculations";
 import {
   BarChart, Bar, LineChart, Line,

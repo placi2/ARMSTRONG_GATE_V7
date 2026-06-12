@@ -82,7 +82,7 @@ export function useRbac(): RbacCapabilities {
 
   const r: RbacCapabilities = {
     // Visibility
-    canViewDashboard:      is("pdg","directeur","rh","finance","chef_equipe","equipements","logistique","auditeur"),
+    canViewDashboard:      is("pdg","directeur","finance"),
     canViewSites:          is("pdg","directeur","logistique","auditeur"),
     canViewTeams:          is("pdg","directeur","rh","chef_equipe","auditeur"),
     canViewEmployees:      is("pdg","directeur","rh","finance","auditeur"),
