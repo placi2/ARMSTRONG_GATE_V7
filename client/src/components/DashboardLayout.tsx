@@ -28,6 +28,8 @@ const ALL_NAV = [
   { path:"/custom-reports",      label:"Rapports PDF",         icon:FileText        },
   { path:"/settings",            label:"Paramètres",           icon:Settings        },
   { path:"/audit",                label:"Journal d'Audit",      icon:ClipboardList   },
+  { path:"/requests",             label:"Demandes",            icon:Bell            },
+  { path:"/requests",             label:"Demandes",            icon:Bell            },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
