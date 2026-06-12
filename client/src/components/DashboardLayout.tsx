@@ -12,6 +12,7 @@ import {
 
 const ALL_NAV = [
   { path:"/",                    label:"Tableau de Bord",      icon:LayoutDashboard },
+  { path:"/requests",             label:"Demandes",            icon:Bell            },
   { path:"/sites",               label:"Sites",                icon:MapPin          },
   { path:"/teams",               label:"Équipes",              icon:Users           },
   { path:"/employees",           label:"Employés",             icon:UserCheck       },
