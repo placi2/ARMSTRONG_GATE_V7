@@ -14,7 +14,7 @@ export interface AppUser{id:string;name:string;email:string;password?:string;rol
 interface Ctx{
   sites:Site[];teams:Team[];employees:Employee[];productions:Production[];expenses:Expense[];cashMovements:CashMovement[];equipment:Equipment[];advances:Advance[];goldStocks:GoldStock[];appUsers:AppUser[];
   allSites:Site[];allTeams:Team[];allEmployees:Employee[];allProductions:Production[];allExpenses:Expense[];allCashMovements:CashMovement[];allEquipment:Equipment[];allAdvances:Advance[];
-  loading:boolean;
+  loading:boolean;load:()=>Promise<void>;
   addSite:(s:Omit<Site,"id">)=>Promise<Site>;updateSite:(id:string,s:Partial<Site>)=>Promise<void>;deleteSite:(id:string)=>Promise<void>;
   addTeam:(t:Omit<Team,"id">)=>Promise<Team>;updateTeam:(id:string,t:Partial<Team>)=>Promise<void>;deleteTeam:(id:string)=>Promise<void>;
   addEmployee:(e:Omit<Employee,"id">)=>Promise<Employee>;updateEmployee:(id:string,e:Partial<Employee>)=>Promise<void>;deleteEmployee:(id:string)=>Promise<void>;
@@ -98,7 +98,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
     sites,teams,employees,productions,expenses,cashMovements:cash,equipment,advances,goldStocks:[],appUsers,
     allSites:sites,allTeams:teams,allEmployees:employees,allProductions:productions,
     allExpenses:expenses,allCashMovements:cash,allEquipment:equipment,allAdvances:advances,
-    loading,addSite,updateSite,deleteSite,addTeam,updateTeam,deleteTeam,
+    loading,load,addSite,updateSite,deleteSite,addTeam,updateTeam,deleteTeam,
     addEmployee,updateEmployee,deleteEmployee,addProduction,updateProduction,deleteProduction,
     addExpense,updateExpense,deleteExpense,addCashMovement,updateCashMovement,deleteCashMovement,
     addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,equipmentStock,siteStock,transferToSite,requests,addRequest,updateRequestStatus,updateRequest,

@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function EquipmentStock() {
-  const { equipment, equipmentStock, siteStock, transferToSite, sites } = useData() as any;
-  console.log("siteStock:", siteStock, "sites:", sites);
+  const { equipment, equipmentStock, siteStock, transferToSite, sites, load } = useData() as any;
+useEffect(() => { load?.(); }, []);
+  const [refreshed, setRefreshed] = useState(false);
+useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
+  
   const { user } = useAuth();
 
   const [tab, setTab]             = useState<"central"|"sites"|"transfer">("central");
