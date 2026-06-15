@@ -19,7 +19,16 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
       r = await pool.query("SELECT * FROM requests ORDER BY created_at DESC");
     }
     res.json(r.rows.map(c));
+  }
+  // Route migration temporaire — corriger statuts des demandes remboursables
+  app.post("/api/requests/fix-statuses", auth, async (_req, res) => {
+    await pool.query(`
+      UPDATE requests SET status='en_attente_equipement'
+      WHERE type='equipement' AND equipment_subtype='remboursable' AND status='en_attente'
+    `);
+    res.json({ ok: true });
   });
+);
 
   // POST — soumettre une demande
   app.post("/api/requests", auth, async (req: any, res) => {

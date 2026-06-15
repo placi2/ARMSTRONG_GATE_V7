@@ -487,7 +487,7 @@ export default function Requests() {
                     {r.transferMode && <span className="text-xs text-slate-400 ml-1">— {r.transferMode}</span>}
                   </td>
                   <td className="px-4 py-2 whitespace-nowrap">
-                    {isPDG && r.status === "en_attente" && (
+                    {isPDG && (r.status === "en_attente" || r.status === "en_attente_epi") && (
                       <button onClick={() => { setSelected(r); setNewAmount(""); }}
                         className="text-blue-600 hover:underline text-xs">Examiner</button>
                     )}
