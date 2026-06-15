@@ -21,7 +21,7 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
     res.json(r.rows.map(c));
   });
 
-  // Route migration temporaire — corriger statuts des demandes remboursables
+  // Route migration — corriger statuts remboursables
   app.post("/api/requests/fix-statuses", auth, async (_req, res) => {
     await pool.query(`
       UPDATE requests SET status='en_attente_equipement'
@@ -29,7 +29,6 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
     `);
     res.json({ ok: true });
   });
-);
 
   // POST — soumettre une demande
   app.post("/api/requests", auth, async (req: any, res) => {
@@ -41,7 +40,6 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
       equipmentSubtype, items
     } = req.body;
 
-    // Pour équipement remboursable → statut direct "en_attente_equipement"
     const initialStatus = (type === "equipement" && equipmentSubtype === "remboursable")
       ? "en_attente_equipement"
       : "en_attente";
@@ -59,11 +57,10 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
     res.json({ ok: true });
   });
 
-  // PUT — mise à jour (validation PDG, décaissement Finance, livraison Chef Équipement)
+  // PUT — mise à jour
   app.put("/api/requests/:id", auth, async (req: any, res) => {
     const { status, approvedAmount, transferMode, transferNote } = req.body;
 
-    // Lire la demande AVANT la mise à jour
     const rq = await pool.query("SELECT * FROM requests WHERE id=$1", [req.params.id]);
     const dem = rq.rows[0];
     if (!dem) return res.status(404).json({ error: "Demande introuvable" });
@@ -75,10 +72,8 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
       [status, finalAmount || null, transferMode || null, transferNote || null, req.params.id]
     );
 
-    // Décaissement → créer avance OU dépense automatiquement
     if (status === "decaisse") {
       if (dem.type === "avance_salaire" && dem.employee_id) {
-        // Avance sur salaire → table advances + table expenses (pour Finance)
         const advId = `AV${Date.now()}`;
         await pool.query(
           "INSERT INTO advances(id,employee_id,date,amount,motif,status)VALUES($1,$2,NOW()::date::text,$3,$4,'Validé') ON CONFLICT DO NOTHING",
@@ -88,7 +83,6 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
           "UPDATE employees SET total_advances=total_advances+$1 WHERE id=$2",
           [finalAmount, dem.employee_id]
         );
-        // Aussi en dépense pour que Finance voie
         const expId = `EX${Date.now()}`;
         await pool.query(
           "INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6) ON CONFLICT DO NOTHING",
@@ -96,7 +90,6 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
            `Avance salaire — ${dem.employee_name || dem.employee_id} — demande ${dem.id}`]
         );
       } else {
-        // Autres types → dépense
         const expId = `EX${Date.now()}`;
         const category =
           dem.type === "carburant"     ? "Carburant" :
@@ -139,7 +132,6 @@ export async function createRequestsTable(pool: Pool) {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  // Ajouter colonnes manquantes si table existante
   const cols = [
     "team_id TEXT", "amount NUMERIC", "approved_amount NUMERIC",
     "employee_id TEXT", "employee_name TEXT",
