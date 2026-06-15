@@ -137,6 +137,9 @@ export async function createRequestsTable(pool: Pool) {
     "transfer_mode TEXT", "transfer_note TEXT"
   ];
   for (const col of cols) {
-    await pool.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS ${col.split(" ")[0]} ${col.split(" ")[1]}`).catch(() => {});
+    const [colName, colType] = col.split(" ");
+    await pool.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS ${colName} ${colType}`)
+      .then(() => console.log(`✅ Column ${colName} OK`))
+      .catch((e) => console.log(`⚠️ Column ${colName}: ${e.message}`));
   }
 }
