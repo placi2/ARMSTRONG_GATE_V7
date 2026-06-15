@@ -5,6 +5,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 
 export default function EquipmentStock() {
   const { equipment, equipmentStock, siteStock, transferToSite, sites } = useData() as any;
+  console.log("siteStock:", siteStock, "sites:", sites);
   const { user } = useAuth();
 
   const [tab, setTab]             = useState<"central"|"sites"|"transfer">("central");
