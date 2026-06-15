@@ -307,8 +307,7 @@ export default function Equipment() {
                             </RbacGuard>
                           </div>
                         </td>
-                        <td className="py-2 px-3 text-xs text-slate-400">{eq.serialNumber || "—"}</td>
-                        <td className="py-2 px-3 text-xs">{eq.purchaseDate || "—"}</td>
+                        <td className="py-2 px-3 font-bold text-green-700">{eq.stockQty || 0}</td>
                         <td className="py-2 px-3 font-bold text-amber-600">{fmt(eq.value || 0)}</td>
                         <td className="py-2 px-3 text-xs">
                           {linked
