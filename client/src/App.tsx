@@ -30,7 +30,7 @@ import WeeklyReports from "./pages/WeeklyReports";
 import CustomReports from "./pages/CustomReports";
 import Settings from "./pages/Settings";
 import AuditHistory from "./pages/AuditHistory";
-import Requests from "./pages/Requests";
+import Requests from "./pages/Requests";import EquipmentStock from "./pages/EquipmentStock";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
