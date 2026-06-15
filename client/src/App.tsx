@@ -58,7 +58,7 @@ function Router() {
       <Route path="/custom-reports"         component={() => <ProtectedRoute><CustomReports /></ProtectedRoute>} />
       <Route path="/settings"               component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/audit"                  component={() => <ProtectedRoute><AuditHistory /></ProtectedRoute>} />
-      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} />
+      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} /><Route path="/equipment-stock"        component={() => <ProtectedRoute><EquipmentStock /></ProtectedRoute>} />
       <Route component={NotFound} />
     </Switch>
   );

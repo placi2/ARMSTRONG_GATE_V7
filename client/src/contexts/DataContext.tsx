@@ -23,7 +23,7 @@ interface Ctx{
   addCashMovement:(m:Omit<CashMovement,"id">)=>Promise<void>;updateCashMovement:(id:string,m:Partial<CashMovement>)=>Promise<void>;deleteCashMovement:(id:string)=>Promise<void>;
   addEquipment:(e:any)=>Promise<void>;updateEquipment:(id:string,e:Partial<Equipment>)=>Promise<void>;deleteEquipment:(id:string)=>Promise<void>;
   addAdvance:(a:Omit<Advance,"id">)=>Promise<void>;deleteAdvance:(id:string)=>Promise<void>;
-  requests:any[];equipmentStock:any[];addRequest:(r:any)=>Promise<void>;updateRequestStatus:(id:string,status:string)=>Promise<void>;updateRequest:(id:string,data:any)=>Promise<void>;
+  requests:any[];equipmentStock:any[];siteStock:any[];transferToSite:(d:any)=>Promise<void>;addRequest:(r:any)=>Promise<void>;updateRequestStatus:(id:string,status:string)=>Promise<void>;updateRequest:(id:string,data:any)=>Promise<void>;
   updateGoldStock:(siteId:string,delta:number,isProd:boolean)=>void;
   addAppUser:(u:any)=>Promise<AppUser>;updateAppUser:(id:string,u:Partial<AppUser>)=>Promise<void>;deleteAppUser:(id:string)=>Promise<void>;
 }
@@ -37,7 +37,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
   const[productions,setProductions]=useState<Production[]>([]);
   const[expenses,setExpenses]=useState<Expense[]>([]);
   const[cash,setCash]=useState<CashMovement[]>([]);
-  const[equipment,setEquipment]=useState<Equipment[]>([]);const[equipmentStock,setEquipmentStock]=useState<any[]>([]);
+  const[equipment,setEquipment]=useState<Equipment[]>([]);const[equipmentStock,setEquipmentStock]=useState<any[]>([]);const[siteStock,setSiteStock]=useState<any[]>([]);
   const[advances,setAdvances]=useState<Advance[]>([]);
   const[appUsers,setAppUsers]=useState<AppUser[]>([]);
   const[requests,setRequests]=useState<any[]>([]);
@@ -46,16 +46,16 @@ export function DataProvider({children}:{children:React.ReactNode}){
     if(!isAuthenticated)return;
     setLoading(true);
     try{
-      const[s,t,e,p,x,c,q,sq,v,u,rq]=await Promise.all([
+      const[s,t,e,p,x,c,q,sq,ss,v,u,rq]=await Promise.all([
         api.getSites(),api.getTeams(),api.getEmployees(),
         api.getProductions(),api.getExpenses(),api.getCash(),
-        api.getEquipment(),api.getEquipmentStock().catch(()=>[]),api.getAdvances(),
+        api.getEquipment(),api.getEquipmentStock().catch(()=>[]),api.getSiteStock().catch(()=>[]),api.getAdvances(),
         api.getUsers().catch(()=>[]),
         api.getRequests().catch(()=>[]),
       ]);
       setSites(s);setTeams(t);setEmployees(e);
       setProductions(p);setExpenses(x);setCash(c);
-      setEquipment(q);setEquipmentStock(sq);setAdvances(v);setAppUsers(u);setRequests(rq);
+      setEquipment(q);setEquipmentStock(sq);setSiteStock(ss);setAdvances(v);setAppUsers(u);setRequests(rq);
     }catch(err){console.error("Load error:",err);}
     finally{setLoading(false);}
   },[isAuthenticated]);
@@ -89,7 +89,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
   const addAdvance=useCallback(async(a:Omit<Advance,"id">)=>{await api.createAdvance({...a,id:`AV${uid()}`,status:"Validé"});await load();},[load]);
   const deleteAdvance=useCallback(async(id:string)=>{await api.deleteAdvance(id);await load();},[load]);
   const addRequest=useCallback(async(req:any)=>{await api.createRequest({...req,id:`REQ${uid()}`});await load();},[load]);
-  const updateRequestStatus=useCallback(async(id:string,status:string)=>{await api.updateRequestStatus(id,status);await load();},[load]);const updateRequest=useCallback(async(id:string,data:any)=>{await api.updateRequest(id,data);await load();},[load]);
+  const updateRequestStatus=useCallback(async(id:string,status:string)=>{await api.updateRequestStatus(id,status);await load();},[load]);const updateRequest=useCallback(async(id:string,data:any)=>{await api.updateRequest(id,data);await load();},[load]);const transferToSite=useCallback(async(d:any)=>{await api.transferToSite(d);await load();},[load]);
   const updateGoldStock=useCallback(()=>{},[]);
   const addAppUser=useCallback(async(u:any):Promise<AppUser>=>{const n={...u,id:`AU${uid()}`,createdAt:new Date().toISOString().split("T")[0]};await api.createUser(n);await load();return n;},[load]);
   const updateAppUser=useCallback(async(_id:string,_u:Partial<AppUser>)=>{await load();},[load]);
@@ -101,7 +101,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
     loading,addSite,updateSite,deleteSite,addTeam,updateTeam,deleteTeam,
     addEmployee,updateEmployee,deleteEmployee,addProduction,updateProduction,deleteProduction,
     addExpense,updateExpense,deleteExpense,addCashMovement,updateCashMovement,deleteCashMovement,
-    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,equipmentStock,requests,addRequest,updateRequestStatus,updateRequest,
+    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,equipmentStock,siteStock,transferToSite,requests,addRequest,updateRequestStatus,updateRequest,
     addAppUser,updateAppUser,deleteAppUser,
   }}>{children}</DataContext.Provider>;
 }

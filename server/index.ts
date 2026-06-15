@@ -44,6 +44,21 @@ async function initDB(){
     CREATE TABLE IF NOT EXISTS app_settings(id INTEGER PRIMARY KEY DEFAULT 1,gold_price_usd NUMERIC DEFAULT 65,currency TEXT DEFAULT 'USD',exchange_rate_cdf NUMERIC DEFAULT 2800,company_name TEXT DEFAULT 'ARMSTRONG GATE',custom_logo TEXT,updated_at TIMESTAMPTZ DEFAULT NOW());
   `);
   await createRequestsTable(pool);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS equipment_site_stock(
+      id TEXT PRIMARY KEY,
+      equipment_id TEXT,
+      equipment_name TEXT,
+      site_id TEXT,
+      site_name TEXT,
+      category TEXT DEFAULT 'remboursable',
+      qty_available NUMERIC DEFAULT 0,
+      qty_on_terrain NUMERIC DEFAULT 0,
+      unit_value NUMERIC DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'remboursable'`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'stock'`).catch(()=>{});
@@ -104,7 +119,7 @@ app.post("/api/cash",auth,async(req:any,res)=>{const{id,siteId,siteName,type,amo
 app.delete("/api/cash/:id",auth,async(req,res)=>{await pool.query("DELETE FROM cash_movements WHERE id=$1",[req.params.id]);res.json({ok:true});});
 app.get("/api/equipment/stock",auth,async(_req,res)=>{const r=await pool.query("SELECT * FROM equipment WHERE stock_qty>0 ORDER BY name");res.json(r.rows.map(c));});app.get("/api/equipment",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM equipment WHERE site_id=$1 ORDER BY name",[u.siteId]):await pool.query("SELECT * FROM equipment ORDER BY name");res.json(r.rows.map(c));});
 app.post("/api/equipment",auth,async(req:any,res)=>{const{id,siteId,teamId,name,type,status,value,serialNumber,purchaseDate,category,stockQty}=req.body;await pool.query("INSERT INTO equipment(id,site_id,team_id,name,type,status,value,serial_number,purchase_date,category,stock_qty)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)ON CONFLICT(id)DO NOTHING",[id,siteId,teamId||null,name,type,status,value||0,serialNumber||null,purchaseDate||null,category||"remboursable",stockQty||0]);res.json({ok:true});});
-app.put("/api/equipment/:id",auth,async(req:any,res)=>{const{status}=req.body;await pool.query("UPDATE equipment SET status=$1 WHERE id=$2",[status,req.params.id]);res.json({ok:true});});
+app.put("/api/equipment/:id",auth,async(req:any,res)=>{const{status,stockQty,category}=req.body;const sets=[];const vals=[];let i=1;if(status!==undefined){sets.push(`status=$${i++}`);vals.push(status);}if(stockQty!==undefined){sets.push(`stock_qty=$${i++}`);vals.push(stockQty);}if(category!==undefined){sets.push(`category=$${i++}`);vals.push(category);}if(sets.length===0)return res.json({ok:true});vals.push(req.params.id);await pool.query(`UPDATE equipment SET ${sets.join(",")} WHERE id=$${i}`,[...vals]);res.json({ok:true});});
 app.delete("/api/equipment/:id",auth,async(req,res)=>{await pool.query("DELETE FROM equipment WHERE id=$1",[req.params.id]);res.json({ok:true});});
 app.get("/api/advances",auth,async(req:any,res)=>{const r=await pool.query("SELECT * FROM advances ORDER BY date DESC,created_at DESC");res.json(r.rows.map(c));});
 app.post("/api/advances",auth,async(req:any,res)=>{const{id,employeeId,date,amount,motif}=req.body;await pool.query("INSERT INTO advances(id,employee_id,date,amount,motif)VALUES($1,$2,$3,$4,$5)ON CONFLICT(id)DO NOTHING",[id,employeeId,date,amount,motif]);await pool.query("UPDATE employees SET total_advances=total_advances+$1 WHERE id=$2",[amount,employeeId]);res.json({ok:true});});
@@ -115,6 +130,9 @@ app.delete("/api/users/:id",auth,async(req,res)=>{await pool.query("DELETE FROM 
 app.get("/api/settings",async(req,res)=>{const r=await pool.query("SELECT * FROM app_settings WHERE id=1");const s=r.rows[0]||{};res.json({goldPriceUsd:parseFloat(s.gold_price_usd)||65,goldPrice:parseFloat(s.gold_price_usd)||65,currency:s.currency||"USD",exchangeRateCdf:parseFloat(s.exchange_rate_cdf)||2800,exchangeRate:parseFloat(s.exchange_rate_cdf)||2800,companyName:s.company_name||"ARMSTRONG GATE",customLogo:s.custom_logo||null});});
 app.put("/api/settings",auth,async(req:any,res)=>{const{goldPriceUsd,currency,exchangeRateCdf,companyName,customLogo}=req.body;await pool.query("INSERT INTO app_settings(id,gold_price_usd,currency,exchange_rate_cdf,company_name,custom_logo)VALUES(1,$1,$2,$3,$4,$5)ON CONFLICT(id)DO UPDATE SET gold_price_usd=$1,currency=$2,exchange_rate_cdf=$3,company_name=$4,custom_logo=$5,updated_at=NOW()",[goldPriceUsd,currency,exchangeRateCdf,companyName,customLogo||null]);res.json({ok:true});});
 setupRequestsRoutes(app, pool, auth, c);
+// Routes stock par site
+app.get("/api/equipment-site-stock",auth,async(req:any,res)=>{const u=req.user;const r=u.siteId?await pool.query("SELECT * FROM equipment_site_stock WHERE site_id=$1 ORDER BY equipment_name",[u.siteId]):await pool.query("SELECT * FROM equipment_site_stock ORDER BY site_id,equipment_name");res.json(r.rows.map(c));});
+app.post("/api/equipment-site-stock/transfer",auth,async(req:any,res)=>{const{equipmentId,equipmentName,siteId,siteName,qty,unitValue,category}=req.body;const existing=await pool.query("SELECT * FROM equipment_site_stock WHERE equipment_id=$1 AND site_id=$2",[equipmentId,siteId]);if(existing.rows.length>0){await pool.query("UPDATE equipment_site_stock SET qty_available=qty_available+$1,updated_at=NOW() WHERE equipment_id=$2 AND site_id=$3",[qty,equipmentId,siteId]);}else{const id=`ESS${Date.now()}`;await pool.query("INSERT INTO equipment_site_stock(id,equipment_id,equipment_name,site_id,site_name,category,qty_available,unit_value)VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[id,equipmentId,equipmentName,siteId,siteName,category||"remboursable",qty,unitValue||0]);}await pool.query("UPDATE equipment SET stock_qty=GREATEST(0,stock_qty-$1) WHERE id=$2",[qty,equipmentId]);res.json({ok:true});});
 const staticPath=path.resolve(__dirname,"public");
 app.use(express.static(staticPath));
 app.get("*",(_,res)=>res.sendFile(path.join(staticPath,"index.html")));
