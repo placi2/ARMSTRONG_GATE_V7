@@ -65,6 +65,7 @@ export default function Equipment() {
     name: "", type: "Pioche", siteId: rbac.siteId || "", teamId: "",
     status: "Opérationnel", value: "", serialNumber: "",
     purchaseDate: new Date().toISOString().split("T")[0],
+    category: "remboursable", stockQty: "0",
   });
 
   const siteOptions = (sites as any[]).map((s: any) => ({ value: s.id, label: s.name, subtitle: s.location }));
@@ -76,7 +77,7 @@ export default function Equipment() {
     if (!form.name.trim() || !form.siteId) { toast.error("Nom et site obligatoires"); return; }
     const cost = parseFloat(form.value) || 0;
     const eqId = `EQ${Date.now()}`;
-    addEquipment?.({ ...form, id: eqId, value: cost });
+    addEquipment?.({ ...form, id: eqId, value: cost, stockQty: parseInt(form.stockQty)||0 });
     if (cost > 0 && addExpense) {
       addExpense({
         date: form.purchaseDate || new Date().toISOString().split("T")[0],
@@ -89,7 +90,7 @@ export default function Equipment() {
       });
     }
     toast.success(`Équipement "${form.name}" ajouté${cost > 0 ? ` · Dépense ${fmt(cost)} créée` : ""}`);
-    setForm({ name:"", type:"Pioche", siteId:rbac.siteId||"", teamId:"", status:"Opérationnel", value:"", serialNumber:"", purchaseDate:new Date().toISOString().split("T")[0] });
+    setForm({ name:"", type:"Pioche", siteId:rbac.siteId||"", teamId:"", status:"Opérationnel", value:"", serialNumber:"", purchaseDate:new Date().toISOString().split("T")[0], category:"remboursable", stockQty:"0" });
     setOpenAdd(false);
   };
 
@@ -185,6 +186,19 @@ export default function Equipment() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Catégorie</Label>
+                      <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white mt-1" value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                        <option value="remboursable">Remboursable (retournable)</option>
+                        <option value="epi">EPI (Protection individuelle)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <Label>Quantité en stock</Label>
+                      <Input type="number" min="0" value={form.stockQty} onChange={e => setForm({ ...form, stockQty: e.target.value })} className="mt-1" placeholder="0" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
                     <div><Label>N° Série</Label><Input value={form.serialNumber} onChange={e => setForm({ ...form, serialNumber: e.target.value })} className="mt-1" /></div>
                     <div>
                       <Label>Date d'achat</Label>
@@ -255,7 +269,7 @@ export default function Equipment() {
               <table className="w-full text-sm">
                 <thead className="border-b border-slate-100">
                   <tr>
-                    {["Nom","Type","Site","Équipe","Statut","N° Série","Date Achat","Coût","Dépense liée",""].map(h => (
+                    {["Nom","Catégorie","Type","Site","Équipe","Statut","Stock","Coût",""].map(h => (
                       <th key={h} className="text-left py-2 px-3 text-xs font-semibold text-slate-600 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -273,6 +287,11 @@ export default function Equipment() {
                     return (
                       <tr key={eq.id} className="border-b border-slate-50 hover:bg-slate-50">
                         <td className="py-2 px-3 font-medium">{eq.name}</td>
+                        <td className="py-2 px-3 text-xs">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${eq.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
+                            {eq.category==="epi"?"EPI":"Remboursable"}
+                          </span>
+                        </td>
                         <td className="py-2 px-3 text-xs"><span className="bg-slate-100 px-2 py-0.5 rounded">{eq.type}</span></td>
                         <td className="py-2 px-3 text-xs text-slate-500">{site?.name || "—"}</td>
                         <td className="py-2 px-3 text-xs text-slate-400">{team?.name || "—"}</td>
