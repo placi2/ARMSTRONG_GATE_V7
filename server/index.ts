@@ -45,6 +45,7 @@ async function initDB(){
   `);
   await createRequestsTable(pool);
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
+  await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'remboursable'`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'stock'`).catch(()=>{});
   const{rowCount}=await pool.query("SELECT id FROM users LIMIT 1");
   if(!rowCount){
