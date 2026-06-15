@@ -29,7 +29,7 @@ const ALL_NAV = [
   { path:"/custom-reports",      label:"Rapports PDF",         icon:FileText        },
   { path:"/settings",            label:"Paramètres",           icon:Settings        },
   { path:"/audit",                label:"Journal d'Audit",      icon:ClipboardList   },
-  { path:"/requests",             label:"Demandes",            icon:Bell            },
+ 
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const roleLabel = role ? ROLE_LABELS[role] : "";
   const roleColor = role ? ROLE_COLORS[role] : "";
   const { requests } = useData();
-  const pendingCount = requests.filter((req: any) => req.status === "en_attente").length;
+  const pendingCount = requests.filter((req: any) => req.status === "en_attente" && (role === "chef_equipe" ? req.requestedBy === user?.id : role === "rh" ? req.type === "avance_salaire" : role === "equipements" ? req.type === "equipement" : role === "logistique" ? req.type === "engin" : true)).length;
   const showBell = role && ["pdg","rh","finance","logistique"].includes(role);
 
   // Site name for scoped roles

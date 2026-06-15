@@ -3,12 +3,18 @@ import type { Pool } from "pg";
 
 export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row: any) => any) {
 
-  // GET — liste selon le rôle
+  // GET — liste filtrée selon le rôle
   app.get("/api/requests", auth, async (req: any, res) => {
     const u = req.user;
     let r;
     if (u.role === "chef_equipe") {
       r = await pool.query("SELECT * FROM requests WHERE requested_by=$1 ORDER BY created_at DESC", [u.id]);
+    } else if (u.role === "rh") {
+      r = await pool.query("SELECT * FROM requests WHERE type='avance_salaire' ORDER BY created_at DESC");
+    } else if (u.role === "equipements") {
+      r = await pool.query("SELECT * FROM requests WHERE type='equipement' ORDER BY created_at DESC");
+    } else if (u.role === "logistique") {
+      r = await pool.query("SELECT * FROM requests WHERE type='engin' ORDER BY created_at DESC");
     } else {
       r = await pool.query("SELECT * FROM requests ORDER BY created_at DESC");
     }
@@ -17,48 +23,84 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
 
   // POST — soumettre une demande
   app.post("/api/requests", auth, async (req: any, res) => {
-    const { id, type, title, description, requestedBy, requestedByName, siteId, teamId, amount, employeeId, employeeName } = req.body;
+    const {
+      id, type, title, description,
+      requestedBy, requestedByName,
+      siteId, teamId,
+      amount, employeeId, employeeName,
+      equipmentSubtype, items
+    } = req.body;
+
+    // Pour équipement remboursable → statut direct "en_attente_equipement"
+    const initialStatus = (type === "equipement" && equipmentSubtype === "remboursable")
+      ? "en_attente_equipement"
+      : "en_attente";
+
     await pool.query(
-      `INSERT INTO requests(id,type,title,description,requested_by,requested_by_name,site_id,team_id,amount,employee_id,employee_name,status)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'en_attente')`,
-      [id, type, title, description, requestedBy, requestedByName, siteId || null, teamId || null, amount || null, employeeId || null, employeeName || null]
+      `INSERT INTO requests(id,type,title,description,requested_by,requested_by_name,site_id,team_id,amount,employee_id,employee_name,equipment_subtype,items,status)
+       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+      [id, type, title, description, requestedBy, requestedByName,
+       siteId || null, teamId || null, amount || null,
+       employeeId || null, employeeName || null,
+       equipmentSubtype || null,
+       items ? JSON.stringify(items) : null,
+       initialStatus]
     );
     res.json({ ok: true });
   });
 
-  // PUT — mise à jour statut + montant modifié + mode décaissement
+  // PUT — mise à jour (validation PDG, décaissement Finance, livraison Chef Équipement)
   app.put("/api/requests/:id", auth, async (req: any, res) => {
     const { status, approvedAmount, transferMode, transferNote } = req.body;
+
+    // Lire la demande AVANT la mise à jour
+    const rq = await pool.query("SELECT * FROM requests WHERE id=$1", [req.params.id]);
+    const dem = rq.rows[0];
+    if (!dem) return res.status(404).json({ error: "Demande introuvable" });
+
+    const finalAmount = approvedAmount || dem.approved_amount || dem.amount;
+
     await pool.query(
       `UPDATE requests SET status=$1,approved_amount=$2,transfer_mode=$3,transfer_note=$4,updated_at=NOW() WHERE id=$5`,
-      [status, approvedAmount || null, transferMode || null, transferNote || null, req.params.id]
+      [status, finalAmount || null, transferMode || null, transferNote || null, req.params.id]
     );
 
-    // Si décaissé → créer automatiquement une dépense ou avance
+    // Décaissement → créer avance OU dépense automatiquement
     if (status === "decaisse") {
-      const rq = await pool.query("SELECT * FROM requests WHERE id=$1", [req.params.id]);
-      const req2 = rq.rows[0];
-      if (req2) {
-        const finalAmount = req2.approved_amount || req2.amount;
-        if (req2.type === "avance_salaire" && req2.employee_id) {
-          // Créer une avance automatiquement
-          const advId = `AV${Date.now()}`;
-          await pool.query(
-            "INSERT INTO advances(id,employee_id,date,amount,motif,status)VALUES($1,$2,NOW()::date::text,$3,$4,'Validé') ON CONFLICT DO NOTHING",
-            [advId, req2.employee_id, finalAmount, `Avance via demande ${req2.id}`]
-          );
-          await pool.query("UPDATE employees SET total_advances=total_advances+$1 WHERE id=$2", [finalAmount, req2.employee_id]);
-        } else {
-          // Créer une dépense automatiquement
-          const expId = `EX${Date.now()}`;
-          const category = req2.type === "carburant" ? "Carburant" : req2.type === "equipement" ? "Équipement" : req2.type === "engin" ? "Logistique" : "Autre";
-          await pool.query(
-            "INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6) ON CONFLICT DO NOTHING",
-            [expId, req2.team_id, req2.site_id, category, finalAmount, `Demande ${req2.type} — ${req2.title}`]
-          );
-        }
+      if (dem.type === "avance_salaire" && dem.employee_id) {
+        // Avance sur salaire → table advances + table expenses (pour Finance)
+        const advId = `AV${Date.now()}`;
+        await pool.query(
+          "INSERT INTO advances(id,employee_id,date,amount,motif,status)VALUES($1,$2,NOW()::date::text,$3,$4,'Validé') ON CONFLICT DO NOTHING",
+          [advId, dem.employee_id, finalAmount, `Avance via demande ${dem.id} — ${dem.employee_name || ""}`]
+        );
+        await pool.query(
+          "UPDATE employees SET total_advances=total_advances+$1 WHERE id=$2",
+          [finalAmount, dem.employee_id]
+        );
+        // Aussi en dépense pour que Finance voie
+        const expId = `EX${Date.now()}`;
+        await pool.query(
+          "INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6) ON CONFLICT DO NOTHING",
+          [expId, dem.team_id, dem.site_id, "Avance Salaire", finalAmount,
+           `Avance salaire — ${dem.employee_name || dem.employee_id} — demande ${dem.id}`]
+        );
+      } else {
+        // Autres types → dépense
+        const expId = `EX${Date.now()}`;
+        const category =
+          dem.type === "carburant"     ? "Carburant" :
+          dem.type === "equipement"    ? "Équipement" :
+          dem.type === "engin"         ? "Logistique" :
+          dem.type === "paiement_etat" ? "Paiement Agent État" : "Autre";
+        await pool.query(
+          "INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6) ON CONFLICT DO NOTHING",
+          [expId, dem.team_id, dem.site_id, category, finalAmount,
+           `Demande ${dem.type} — ${dem.title} — demande ${dem.id}`]
+        );
       }
     }
+
     res.json({ ok: true });
   });
 }
@@ -78,6 +120,8 @@ export async function createRequestsTable(pool: Pool) {
       approved_amount NUMERIC,
       employee_id TEXT,
       employee_name TEXT,
+      equipment_subtype TEXT,
+      items JSONB,
       transfer_mode TEXT,
       transfer_note TEXT,
       status TEXT DEFAULT 'en_attente',
@@ -85,10 +129,14 @@ export async function createRequestsTable(pool: Pool) {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
   `);
-  // Ajouter les colonnes manquantes si la table existe déjà
-  const cols = ["team_id TEXT","amount NUMERIC","approved_amount NUMERIC","employee_id TEXT","employee_name TEXT","transfer_mode TEXT","transfer_note TEXT"];
+  // Ajouter colonnes manquantes si table existante
+  const cols = [
+    "team_id TEXT", "amount NUMERIC", "approved_amount NUMERIC",
+    "employee_id TEXT", "employee_name TEXT",
+    "equipment_subtype TEXT", "items JSONB",
+    "transfer_mode TEXT", "transfer_note TEXT"
+  ];
   for (const col of cols) {
-    const name = col.split(" ")[0];
-    await pool.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS ${col}`).catch(()=>{});
+    await pool.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS ${col.split(" ")[0]} ${col.split(" ")[1]}`).catch(() => {});
   }
 }

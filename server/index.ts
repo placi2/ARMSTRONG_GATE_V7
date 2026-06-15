@@ -23,7 +23,7 @@ function auth(req:any,res:any,next:any){
   catch{res.status(401).json({error:"Token invalide"});}
 }
 function c(row:any){
-  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt",requested_by:"requestedBy",requested_by_name:"requestedByName",updated_at:"updatedAt"};
+  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt",requested_by:"requestedBy",requested_by_name:"requestedByName",updated_at:"updatedAt",approved_amount:"approvedAmount",employee_name:"employeeName",transfer_mode:"transferMode",transfer_note:"transferNote"};
   const out:any={};
   for(const[k,v]of Object.entries(row))out[m[k]||k]=v;
   if(out.estimatedValue!==undefined)out.value=parseFloat(out.estimatedValue)||0;
