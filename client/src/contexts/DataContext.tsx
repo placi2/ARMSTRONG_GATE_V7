@@ -23,7 +23,7 @@ interface Ctx{
   addCashMovement:(m:Omit<CashMovement,"id">)=>Promise<void>;updateCashMovement:(id:string,m:Partial<CashMovement>)=>Promise<void>;deleteCashMovement:(id:string)=>Promise<void>;
   addEquipment:(e:any)=>Promise<void>;updateEquipment:(id:string,e:Partial<Equipment>)=>Promise<void>;deleteEquipment:(id:string)=>Promise<void>;
   addAdvance:(a:Omit<Advance,"id">)=>Promise<void>;deleteAdvance:(id:string)=>Promise<void>;
-  requests:any[];equipmentStock:any[];siteStock:any[];transferToSite:(d:any)=>Promise<void>;addRequest:(r:any)=>Promise<void>;updateRequestStatus:(id:string,status:string)=>Promise<void>;updateRequest:(id:string,data:any)=>Promise<void>;
+  requests:any[];equipmentStock:any[];siteStock:any[];equipmentTransfers:any[];transferToSite:(d:any)=>Promise<void>;addRequest:(r:any)=>Promise<void>;updateRequestStatus:(id:string,status:string)=>Promise<void>;updateRequest:(id:string,data:any)=>Promise<void>;
   updateGoldStock:(siteId:string,delta:number,isProd:boolean)=>void;
   addAppUser:(u:any)=>Promise<AppUser>;updateAppUser:(id:string,u:Partial<AppUser>)=>Promise<void>;deleteAppUser:(id:string)=>Promise<void>;
 }
@@ -37,7 +37,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
   const[productions,setProductions]=useState<Production[]>([]);
   const[expenses,setExpenses]=useState<Expense[]>([]);
   const[cash,setCash]=useState<CashMovement[]>([]);
-  const[equipment,setEquipment]=useState<Equipment[]>([]);const[equipmentStock,setEquipmentStock]=useState<any[]>([]);const[siteStock,setSiteStock]=useState<any[]>([]);
+  const[equipment,setEquipment]=useState<Equipment[]>([]);const[equipmentStock,setEquipmentStock]=useState<any[]>([]);const[siteStock,setSiteStock]=useState<any[]>([]);const[equipmentTransfers,setEquipmentTransfers]=useState<any[]>([]);
   const[advances,setAdvances]=useState<Advance[]>([]);
   const[appUsers,setAppUsers]=useState<AppUser[]>([]);
   const[requests,setRequests]=useState<any[]>([]);
@@ -46,16 +46,16 @@ export function DataProvider({children}:{children:React.ReactNode}){
     if(!isAuthenticated)return;
     setLoading(true);
     try{
-      const[s,t,e,p,x,c,q,sq,ss,v,u,rq]=await Promise.all([
+      const[s,t,e,p,x,c,q,sq,ss,et,v,u,rq]=await Promise.all([
         api.getSites(),api.getTeams(),api.getEmployees(),
         api.getProductions(),api.getExpenses(),api.getCash(),
-        api.getEquipment(),api.getEquipmentStock().catch(()=>[]),api.getSiteStock().catch(()=>[]),api.getAdvances(),
+        api.getEquipment(),api.getEquipmentStock().catch(()=>[]),api.getSiteStock().catch(()=>[]),api.getEquipmentTransfers().catch(()=>[]),api.getAdvances(),
         api.getUsers().catch(()=>[]),
         api.getRequests().catch(()=>[]),
       ]);
       setSites(s);setTeams(t);setEmployees(e);
       setProductions(p);setExpenses(x);setCash(c);
-      setEquipment(q);setEquipmentStock(sq);setSiteStock(ss);setAdvances(v);setAppUsers(u);setRequests(rq);
+      setEquipment(q);setEquipmentStock(sq);setSiteStock(ss);setEquipmentTransfers(et);setAdvances(v);setAppUsers(u);setRequests(rq);
     }catch(err){console.error("Load error:",err);}
     finally{setLoading(false);}
   },[isAuthenticated]);
@@ -101,7 +101,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
     loading,load,addSite,updateSite,deleteSite,addTeam,updateTeam,deleteTeam,
     addEmployee,updateEmployee,deleteEmployee,addProduction,updateProduction,deleteProduction,
     addExpense,updateExpense,deleteExpense,addCashMovement,updateCashMovement,deleteCashMovement,
-    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,equipmentStock,siteStock,transferToSite,requests,addRequest,updateRequestStatus,updateRequest,
+    addEquipment,updateEquipment,deleteEquipment,addAdvance,deleteAdvance,updateGoldStock,equipmentStock,siteStock,equipmentTransfers,transferToSite,requests,addRequest,updateRequestStatus,updateRequest,
     addAppUser,updateAppUser,deleteAppUser,
   }}>{children}</DataContext.Provider>;
 }

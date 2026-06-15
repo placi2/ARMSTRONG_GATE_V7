@@ -5,14 +5,14 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function EquipmentStock() {
-  const { equipment, equipmentStock, siteStock, transferToSite, sites, load } = useData() as any;
+  const { equipment, equipmentStock, siteStock, equipmentTransfers, transferToSite, sites, load } = useData() as any;
 useEffect(() => { load?.(); }, []);
   const [refreshed, setRefreshed] = useState(false);
 useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
   
   const { user } = useAuth();
 
-  const [tab, setTab]             = useState<"central"|"sites"|"transfer">("central");
+  const [tab, setTab] = useState<"central"|"sites"|"transfer"|"history">("central");
   const [transferForm, setForm]   = useState({ equipmentId:"", siteId:"", qty:"1" });
   const [saving, setSaving]       = useState(false);
   const [success, setSuccess]     = useState("");
@@ -58,12 +58,12 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">Stock Équipements</h1>
         <div className="flex gap-2">
-          {(["central","sites","transfer"] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-1.5 rounded-lg text-sm ${tab===t?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
-              {t==="central"?"📦 Stock Central":t==="sites"?"🏗️ Stock par Site":"🔄 Transfert"}
-            </button>
-          ))}
+         {(["central","sites","transfer","history"] as const).map(t => (
+  <button key={t} onClick={() => setTab(t)}
+    className={`px-3 py-1.5 rounded-lg text-sm ${tab===t?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
+    {t==="central"?"📦 Stock Central":t==="sites"?"🏗️ Stock par Site":t==="transfer"?"🔄 Transfert":"📋 Historique"}
+  </button>
+))}
         </div>
       </div>
 
@@ -202,6 +202,49 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               {saving ? "Transfert en cours..." : "🔄 Transférer vers le site"}
             </button>
           </div>
+        </div>
+      )}
+      {/* ── Historique Transferts ── */}
+      {tab === "history" && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-slate-50 border-b">
+            <h2 className="font-semibold text-slate-700 text-sm">📋 Historique des transferts ({equipmentTransfers.length})</h2>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Équipement</th>
+                <th className="px-4 py-2">Site destinataire</th>
+                <th className="px-4 py-2">Catégorie</th>
+                <th className="px-4 py-2">Qté</th>
+                <th className="px-4 py-2">Prix unit.</th>
+                <th className="px-4 py-2">Transféré par</th>
+              </tr>
+            </thead>
+            <tbody>
+              {equipmentTransfers.map((t: any) => (
+                <tr key={t.id} className="border-t hover:bg-slate-50">
+                  <td className="px-4 py-2 text-xs text-slate-500">
+                    {new Date(t.createdAt).toLocaleDateString("fr-FR")}
+                  </td>
+                  <td className="px-4 py-2 font-medium">{t.equipmentName}</td>
+                  <td className="px-4 py-2">{t.siteName}</td>
+                  <td className="px-4 py-2">
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${t.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
+                      {t.category==="epi"?"EPI":"Remboursable"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2 font-bold">{t.qty}</td>
+                  <td className="px-4 py-2">{t.unitValue}$</td>
+                  <td className="px-4 py-2 text-slate-500">{t.transferredByName || t.transferredBy || "—"}</td>
+                </tr>
+              ))}
+              {equipmentTransfers.length === 0 && (
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Aucun transfert effectué</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
     </DashboardLayout>
