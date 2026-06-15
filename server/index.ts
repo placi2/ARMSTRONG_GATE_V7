@@ -44,6 +44,8 @@ async function initDB(){
     CREATE TABLE IF NOT EXISTS app_settings(id INTEGER PRIMARY KEY DEFAULT 1,gold_price_usd NUMERIC DEFAULT 65,currency TEXT DEFAULT 'USD',exchange_rate_cdf NUMERIC DEFAULT 2800,company_name TEXT DEFAULT 'ARMSTRONG GATE',custom_logo TEXT,updated_at TIMESTAMPTZ DEFAULT NOW());
   `);
   await createRequestsTable(pool);
+  await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
+  await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'stock'`).catch(()=>{});
   const{rowCount}=await pool.query("SELECT id FROM users LIMIT 1");
   if(!rowCount){
     await pool.query(`INSERT INTO users(id,name,email,password,role)VALUES('AU001','Admin PDG','admin@goldmine.com','admin123','pdg'),('AU002','Manager Site 1','manager@goldmine.com','manager123','directeur')ON CONFLICT DO NOTHING`);
@@ -99,7 +101,7 @@ app.delete("/api/expenses/:id",auth,async(req,res)=>{await pool.query("DELETE FR
 app.get("/api/cash",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM cash_movements WHERE site_id=$1 ORDER BY date DESC",[u.siteId]):await pool.query("SELECT * FROM cash_movements ORDER BY date DESC,created_at DESC");res.json(r.rows.map(c));});
 app.post("/api/cash",auth,async(req:any,res)=>{const{id,siteId,siteName,type,amount,date,category,paymentMethod,comment}=req.body;await pool.query("INSERT INTO cash_movements(id,site_id,site_name,type,amount,date,category,payment_method,comment)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)ON CONFLICT(id)DO NOTHING",[id,siteId,siteName,type,amount,date,category,paymentMethod,comment]);res.json({ok:true});});
 app.delete("/api/cash/:id",auth,async(req,res)=>{await pool.query("DELETE FROM cash_movements WHERE id=$1",[req.params.id]);res.json({ok:true});});
-app.get("/api/equipment",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM equipment WHERE site_id=$1 ORDER BY name",[u.siteId]):await pool.query("SELECT * FROM equipment ORDER BY name");res.json(r.rows.map(c));});
+app.get("/api/equipment/stock",auth,async(_req,res)=>{const r=await pool.query("SELECT * FROM equipment WHERE stock_qty>0 ORDER BY name");res.json(r.rows.map(c));});app.get("/api/equipment",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM equipment WHERE site_id=$1 ORDER BY name",[u.siteId]):await pool.query("SELECT * FROM equipment ORDER BY name");res.json(r.rows.map(c));});
 app.post("/api/equipment",auth,async(req:any,res)=>{const{id,siteId,teamId,name,type,status,value,serialNumber,purchaseDate}=req.body;await pool.query("INSERT INTO equipment(id,site_id,team_id,name,type,status,value,serial_number,purchase_date)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)ON CONFLICT(id)DO NOTHING",[id,siteId,teamId||null,name,type,status,value||0,serialNumber||null,purchaseDate||null]);res.json({ok:true});});
 app.put("/api/equipment/:id",auth,async(req:any,res)=>{const{status}=req.body;await pool.query("UPDATE equipment SET status=$1 WHERE id=$2",[status,req.params.id]);res.json({ok:true});});
 app.delete("/api/equipment/:id",auth,async(req,res)=>{await pool.query("DELETE FROM equipment WHERE id=$1",[req.params.id]);res.json({ok:true});});
