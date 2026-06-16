@@ -23,7 +23,7 @@ function auth(req:any,res:any,next:any){
   catch{res.status(401).json({error:"Token invalide"});}
 }
 function c(row:any){
-  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt",requested_by:"requestedBy",requested_by_name:"requestedByName",stock_qty:"stockQty",qty_available:"qtyAvailable",qty_on_terrain:"qtyOnTerrain",unit_value:"unitValue",equipment_id:"equipmentId",equipment_name:"equipmentName",site_name:"siteName",updated_at:"updatedAt",approved_amount:"approvedAmount",employee_name:"employeeName",transfer_mode:"transferMode",transfer_note:"transferNote",transferred_by:"transferredBy",transferred_by_name:"transferredByName"};
+  const m:Record<string,string>={site_id:"siteId",team_id:"teamId",employee_id:"employeeId",monthly_salary:"monthlySalary",total_advances:"totalAdvances",join_date:"joinDate",price_per_gram:"pricePerGram",estimated_value:"estimatedValue",payment_method:"paymentMethod",site_name:"siteName",serial_number:"serialNumber",purchase_date:"purchaseDate",equipment_id:"equipmentId",created_at:"createdAt",requested_by:"requestedBy",requested_by_name:"requestedByName",stock_qty:"stockQty",qty_available:"qtyAvailable",qty_on_terrain:"qtyOnTerrain",unit_value:"unitValue",equipment_id:"equipmentId",equipment_name:"equipmentName",site_name:"siteName",updated_at:"updatedAt",approved_amount:"approvedAmount",employee_name:"employeeName",transfer_mode:"transferMode",transfer_note:"transferNote",transferred_by:"transferredBy",transferred_by_name:"transferredByName",qty_out:"qtyOut",qty_returned:"qtyReturned",status_out:"statusOut",status_return:"statusReturn",responsible_type:"responsibleType",responsible_id:"responsibleId",responsible_name:"responsibleName",movement_type:"movementType",team_name:"teamName"};
   const out:any={};
   for(const[k,v]of Object.entries(row))out[m[k]||k]=v;
   if(out.estimatedValue!==undefined)out.value=parseFloat(out.estimatedValue)||0;
@@ -74,6 +74,30 @@ async function initDB(){
       created_at TIMESTAMPTZ DEFAULT NOW()
     );
   
+  `).catch(()=>{});
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS equipment_movements(
+      id TEXT PRIMARY KEY,
+      equipment_site_stock_id TEXT,
+      equipment_id TEXT,
+      equipment_name TEXT,
+      site_id TEXT,
+      team_id TEXT,
+      team_name TEXT,
+      qty_out NUMERIC DEFAULT 0,
+      qty_returned NUMERIC DEFAULT 0,
+      date TEXT,
+      status_out TEXT DEFAULT 'bon_etat',
+      status_return TEXT,
+      responsible_type TEXT,
+      responsible_id TEXT,
+      responsible_name TEXT,
+      notes TEXT,
+      movement_type TEXT DEFAULT 'sortie',
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
   `).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'remboursable'`).catch(()=>{});
@@ -150,6 +174,10 @@ setupRequestsRoutes(app, pool, auth, c);
 app.get("/api/equipment-site-stock",auth,async(req:any,res)=>{const u=req.user;const r=u.siteId?await pool.query("SELECT * FROM equipment_site_stock WHERE site_id=$1 ORDER BY equipment_name",[u.siteId]):await pool.query("SELECT * FROM equipment_site_stock ORDER BY site_id,equipment_name");res.json(r.rows.map(c));});
 app.post("/api/equipment-site-stock/transfer",auth,async(req:any,res)=>{const{equipmentId,equipmentName,siteId,siteName,qty,unitValue,category}=req.body;const existing=await pool.query("SELECT * FROM equipment_site_stock WHERE equipment_id=$1 AND site_id=$2",[equipmentId,siteId]);if(existing.rows.length>0){await pool.query("UPDATE equipment_site_stock SET qty_available=qty_available+$1,updated_at=NOW() WHERE equipment_id=$2 AND site_id=$3",[qty,equipmentId,siteId]);}else{const id=`ESS${Date.now()}`;await pool.query("INSERT INTO equipment_site_stock(id,equipment_id,equipment_name,site_id,site_name,category,qty_available,unit_value)VALUES($1,$2,$3,$4,$5,$6,$7,$8)",[id,equipmentId,equipmentName,siteId,siteName,category||"remboursable",qty,unitValue||0]);}await pool.query("UPDATE equipment SET stock_qty=GREATEST(0,stock_qty-$1) WHERE id=$2",[qty,equipmentId]);const trId=`TR${Date.now()}`;await pool.query("INSERT INTO equipment_transfers(id,equipment_id,equipment_name,site_id,site_name,qty,unit_value,category,transferred_by,transferred_by_name)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)",[trId,equipmentId,equipmentName,siteId,siteName,qty,unitValue||0,category||"remboursable",(req as any).user?.id||"",(req as any).user?.name||""]);res.json({ok:true});});
 app.get("/api/equipment-transfers",auth,async(_req,res)=>{const r=await pool.query("SELECT * FROM equipment_transfers ORDER BY created_at DESC");res.json(r.rows.map(c));});
+// Routes mouvements équipements (sorties/retours)
+app.get("/api/equipment-movements",auth,async(req:any,res)=>{const u=req.user;const r=u.siteId?await pool.query("SELECT * FROM equipment_movements WHERE site_id=$1 ORDER BY created_at DESC",[u.siteId]):await pool.query("SELECT * FROM equipment_movements ORDER BY created_at DESC");res.json(r.rows.map(c));});
+app.post("/api/equipment-movements/sortie",auth,async(req:any,res)=>{const{equipmentId,equipmentName,siteId,teamId,teamName,qty,date,notes}=req.body;const id=`MV${Date.now()}`;await pool.query("INSERT INTO equipment_movements(id,equipment_id,equipment_name,site_id,team_id,team_name,qty_out,date,movement_type,notes,created_by)VALUES($1,$2,$3,$4,$5,$6,$7,$8,'sortie',$9,$10)",[id,equipmentId,equipmentName,siteId,teamId||null,teamName||null,qty,date,notes||null,(req as any).user?.id||""]);await pool.query("UPDATE equipment_site_stock SET qty_available=GREATEST(0,qty_available-$1),qty_on_terrain=qty_on_terrain+$1,updated_at=NOW() WHERE equipment_id=$2 AND site_id=$3",[qty,equipmentId,siteId]);res.json({ok:true,id});});
+app.put("/api/equipment-movements/:id/retour",auth,async(req:any,res)=>{const{qtyReturned,statusReturn,responsibleType,responsibleId,responsibleName,notes}=req.body;const mv=await pool.query("SELECT * FROM equipment_movements WHERE id=$1",[req.params.id]);const m=mv.rows[0];if(!m)return res.status(404).json({error:"Mouvement introuvable"});await pool.query("UPDATE equipment_movements SET qty_returned=$1,status_return=$2,responsible_type=$3,responsible_id=$4,responsible_name=$5,notes=$6,updated_at=NOW() WHERE id=$7",[qtyReturned,statusReturn,responsibleType||null,responsibleId||null,responsibleName||null,notes||null,req.params.id]);const qtyReturnedOk=statusReturn==="bon_etat"?parseFloat(qtyReturned):0;await pool.query("UPDATE equipment_site_stock SET qty_available=qty_available+$1,qty_on_terrain=GREATEST(0,qty_on_terrain-$2),updated_at=NOW() WHERE equipment_id=$3 AND site_id=$4",[qtyReturnedOk,qtyReturned,m.equipment_id,m.site_id]);if(statusReturn!=="bon_etat"&&responsibleType){const expId=`EX${Date.now()}`;const unitVal=parseFloat(m.qty_out)||0;await pool.query("INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6)ON CONFLICT DO NOTHING",[expId,m.team_id,m.site_id,"Équipement",unitVal,`${statusReturn==="casse"?"Casse":"Perte"} — ${m.equipment_name} — responsable: ${responsibleName||responsibleType}`]);}res.json({ok:true});});
 const staticPath=path.resolve(__dirname,"public");
 app.use(express.static(staticPath));
 app.get("*",(_,res)=>res.sendFile(path.join(staticPath,"index.html")));
