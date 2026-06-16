@@ -46,7 +46,7 @@ function useSafeSettings() {
 export default function Dashboard() {
   const { sites, teams, productions, expenses, cashMovements, employees } = useData();
   const { settings, fmt, sym, goldPrice } = useSafeSettings();
-  const { user } = useAuth();
+  const { user } = useAuth();const role = user?.role;
   const rbac = useRbac();
   const [, setLocation] = useLocation();
 
