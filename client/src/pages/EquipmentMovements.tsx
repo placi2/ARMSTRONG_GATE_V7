@@ -243,12 +243,13 @@ export default function EquipmentMovements() {
                       </div>
                     </div>
                     {/* Validation total */}
-                    {(() => {
+                    {selectedMv && (() => {
                       const total = (parseFloat(qtyGood)||0) + (parseFloat(qtyCasse)||0) + (parseFloat(qtyManquant)||0);
-                      const ok = total === parseFloat(selectedMv.qtyOut);
+                      const qtyOut = parseFloat(selectedMv.qtyOut) || 0;
+                      const ok = total === qtyOut;
                       return (
                         <p className={`mt-2 text-xs font-medium ${ok?"text-green-600":"text-red-500"}`}>
-                          Total : {total} / {selectedMv.qtyOut} {ok?"✅":"⚠️ doit égaler la quantité sortie"}
+                          Total : {total} / {qtyOut} {ok?"✅":"⚠️ doit égaler la quantité sortie"}
                         </p>
                       );
                     })()}
