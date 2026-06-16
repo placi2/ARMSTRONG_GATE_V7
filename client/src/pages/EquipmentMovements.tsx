@@ -20,14 +20,14 @@ export default function EquipmentMovements() {
   const [successSortie, setSuccessSortie] = useState("");
 
   // Modal retour
-  const [selectedMv, setSelectedMv]       = useState<any>(null);
-  const [qtyReturned, setQtyReturned]     = useState("");
-  const [statusReturn, setStatusReturn]   = useState("bon_etat");
-  const [responsibleType, setRespType]    = useState("accident");
-  const [responsibleId, setRespId]        = useState("");
-  const [responsibleName, setRespName]    = useState("");
-  const [retourNotes, setRetourNotes]     = useState("");
-  const [savingRetour, setSavingRetour]   = useState(false);
+  const [qtyGood, setQtyGood]           = useState("");
+  const [qtyCasse, setQtyCasse]         = useState("0");
+  const [qtyManquant, setQtyManquant]   = useState("0");
+  const [responsibleType, setRespType]  = useState("accident");
+  const [responsibleId, setRespId]      = useState("");
+  const [responsibleName, setRespName]  = useState("");
+  const [retourNotes, setRetourNotes]   = useState("");
+  const [savingRetour, setSavingRetour] = useState(false);
 
   // Filtre historique
   const [searchHist, setSearchHist] = useState("");
@@ -78,21 +78,31 @@ export default function EquipmentMovements() {
   };
 
   const handleRetour = async () => {
-    if (!selectedMv || !qtyReturned) return;
+    if (!selectedMv) return;
+    const good = parseFloat(qtyGood) || 0;
+    const casse = parseFloat(qtyCasse) || 0;
+    const manquant = parseFloat(qtyManquant) || 0;
+    const total = good + casse + manquant;
+    if (total !== parseFloat(selectedMv.qtyOut)) {
+      alert(`Total (${total}) doit égaler la quantité sortie (${selectedMv.qtyOut})`);
+      return;
+    }
     setSavingRetour(true);
     try {
       const emp = employees.find((e: any) => e.id === responsibleId);
       await createRetour(selectedMv.id, {
-        qtyReturned:     parseFloat(qtyReturned),
-        statusReturn,
-        responsibleType: statusReturn !== "bon_etat" ? responsibleType : null,
-        responsibleId:   statusReturn !== "bon_etat" ? responsibleId || null : null,
-        responsibleName: statusReturn !== "bon_etat" ? (emp?.name || responsibleName || null) : null,
-        notes:           retourNotes || null,
+        qtyGood: good,
+        qtyCasse: casse,
+        qtyManquant: manquant,
+        responsibleType: (casse > 0 || manquant > 0) ? responsibleType : null,
+        responsibleId: (casse > 0 || manquant > 0) ? responsibleId || null : null,
+        responsibleName: (casse > 0 || manquant > 0) ? (emp?.name || responsibleName || null) : null,
+        notes: retourNotes || null,
       });
       setSelectedMv(null);
-      setQtyReturned("");
-      setStatusReturn("bon_etat");
+      setQtyGood("");
+      setQtyCasse("0");
+      setQtyManquant("0");
       setRespType("accident");
       setRespId("");
       setRespName("");
@@ -206,24 +216,46 @@ export default function EquipmentMovements() {
                   Sorti : {selectedMv.qtyOut} unité(s) — Équipe : {selectedMv.teamName || "—"}
                 </p>
                 <div className="space-y-3">
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Quantité retournée</label>
-                    <input type="number" min="0" max={selectedMv.qtyOut}
-                      value={qtyReturned}
-                      onChange={e => setQtyReturned(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder={`Max: ${selectedMv.qtyOut}`} />
+                  {/* Résumé quantités */}
+                  <div className="bg-slate-50 rounded-lg p-3 text-xs">
+                    <p className="font-medium text-slate-600 mb-2">Quantité sortie : <strong>{selectedMv.qtyOut}</strong></p>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-green-600 font-medium block mb-1">✅ Bon état</label>
+                        <input type="number" min="0" max={selectedMv.qtyOut}
+                          value={qtyGood}
+                          onChange={e => setQtyGood(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="text-red-600 font-medium block mb-1">🔴 Cassé</label>
+                        <input type="number" min="0" max={selectedMv.qtyOut}
+                          value={qtyCasse}
+                          onChange={e => setQtyCasse(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="text-slate-600 font-medium block mb-1">⚫ Manquant</label>
+                        <input type="number" min="0" max={selectedMv.qtyOut}
+                          value={qtyManquant}
+                          onChange={e => setQtyManquant(e.target.value)}
+                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
+                      </div>
+                    </div>
+                    {/* Validation total */}
+                    {(() => {
+                      const total = (parseFloat(qtyGood)||0) + (parseFloat(qtyCasse)||0) + (parseFloat(qtyManquant)||0);
+                      const ok = total === parseFloat(selectedMv.qtyOut);
+                      return (
+                        <p className={`mt-2 text-xs font-medium ${ok?"text-green-600":"text-red-500"}`}>
+                          Total : {total} / {selectedMv.qtyOut} {ok?"✅":"⚠️ doit égaler la quantité sortie"}
+                        </p>
+                      );
+                    })()}
                   </div>
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">État au retour</label>
-                    <select value={statusReturn} onChange={e => setStatusReturn(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm">
-                      <option value="bon_etat">✅ Bon état</option>
-                      <option value="casse">🔴 Cassé</option>
-                      <option value="manquant">⚫ Manquant / Perdu</option>
-                    </select>
-                  </div>
-                  {statusReturn !== "bon_etat" && (
+
+                  {/* Responsabilité si cassé ou manquant */}
+                  {((parseFloat(qtyCasse)||0) > 0 || (parseFloat(qtyManquant)||0) > 0) && (
                     <>
                       <div>
                         <label className="text-xs text-slate-500 mb-1 block">Responsabilité</label>
@@ -252,11 +284,11 @@ export default function EquipmentMovements() {
                     <label className="text-xs text-slate-500 mb-1 block">Notes</label>
                     <input value={retourNotes} onChange={e => setRetourNotes(e.target.value)}
                       className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="Observations sur l'état..." />
+                      placeholder="Observations..." />
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <button onClick={handleRetour} disabled={savingRetour||!qtyReturned}
+                  <button onClick={handleRetour} disabled={savingRetour||!(parseFloat(qtyGood)||0)+(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0)}
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
                     {savingRetour ? "Enregistrement..." : "✅ Confirmer retour"}
                   </button>
