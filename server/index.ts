@@ -95,7 +95,7 @@ app.post("/api/auth/login",async(req,res)=>{
     const r=await pool.query("SELECT * FROM users WHERE LOWER(email)=$1 AND password=$2",[email?.toLowerCase()?.trim(),password?.trim()]);
     if(!r.rows[0])return res.status(401).json({error:"Email ou mot de passe incorrect"});
     const u=r.rows[0];
-    const token=jwt.sign({id:u.id,email:u.email,role:u.role,siteId:u.site_id,teamId:u.team_id},SECRET,{expiresIn:"30d"});
+    const token=jwt.sign({id:u.id,name:u.name,email:u.email,role:u.role,siteId:u.site_id,teamId:u.team_id},SECRET,{expiresIn:"30d"});
     res.json({token,user:{id:u.id,name:u.name,email:u.email,role:u.role,siteId:u.site_id,teamId:u.team_id}});
   }catch(e:any){res.status(500).json({error:e.message});}
 });
