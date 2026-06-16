@@ -223,21 +223,21 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               </tr>
             </thead>
             <tbody>
-              {equipmentTransfers.map((t: any) => (
-                <tr key={t.id} className="border-t hover:bg-slate-50">
+              {equipmentTransfers.map((tr: any) => (
+                <tr key={tr.id} className="border-t hover:bg-slate-50">
                   <td className="px-4 py-2 text-xs text-slate-500">
-                    {new Date(t.createdAt).toLocaleDateString("fr-FR")}
+                    {new Date(tr.createdAt).toLocaleDateString("fr-FR")}
                   </td>
-                  <td className="px-4 py-2 font-medium">{t.equipmentName}</td>
-                  <td className="px-4 py-2">{t.siteName}</td>
+                  <td className="px-4 py-2 font-medium">{tr.equipmentName}</td>
+                  <td className="px-4 py-2">{tr.siteName}</td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${t.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
-                      {t.category==="epi"?"EPI":"Remboursable"}
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${tr.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
+                      {tr.category==="epi"?"EPI":"Remboursable"}
                     </span>
                   </td>
-                  <td className="px-4 py-2 font-bold">{t.qty}</td>
-                  <td className="px-4 py-2">{t.unitValue}$</td>
-                  <td className="px-4 py-2 text-slate-500">{t.transferredByName || t.transferredBy || "—"}</td>
+                  <td className="px-4 py-2 font-bold">{tr.qty}</td>
+                  <td className="px-4 py-2">{tr.unitValue}$</td>
+                  <td className="px-4 py-2 text-slate-500">{tr.transferredByName || tr.transferredBy || "—"}</td>
                 </tr>
               ))}
               {equipmentTransfers.length === 0 && (
