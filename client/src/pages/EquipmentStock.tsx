@@ -6,7 +6,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 
 export default function EquipmentStock() {
   const { equipment, equipmentStock, siteStock, equipmentTransfers, transferToSite, sites, load } = useData() as any;
-useEffect(() => { load?.(); }, []);
+useEffect(() => { load?.(); }, [tab]);
   const [refreshed, setRefreshed] = useState(false);
 useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
   

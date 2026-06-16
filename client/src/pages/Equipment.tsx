@@ -120,7 +120,7 @@ export default function Equipment() {
   });
 
   const { page, perPage, paginated, total, setPage, setPerPage } = usePagination(filtered);
-  const totalValue   = (equipment as any[]).reduce((s: number, e: any) => s + (e.value || 0), 0);
+  const totalValue = (equipment as any[]).reduce((s: number, e: any) => s + ((e.value || 0) * (e.stockQty || 1)), 0);
   const operational  = (equipment as any[]).filter((e: any) => e.status === "Opérationnel").length;
 
   return (
