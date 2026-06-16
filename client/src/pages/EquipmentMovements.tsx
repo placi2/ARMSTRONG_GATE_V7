@@ -19,29 +19,26 @@ export default function EquipmentMovements() {
   const [savingSortie, setSavingSortie] = useState(false);
   const [successSortie, setSuccessSortie] = useState("");
 
-  // Modal retour
-  const [qtyGood, setQtyGood]           = useState("");
+  // Modal retour — selectedMv déclaré ici
+  const [selectedMv, setSelectedMv]     = useState<any>(null);
+  const [qtyGood, setQtyGood]           = useState("0");
   const [qtyCasse, setQtyCasse]         = useState("0");
   const [qtyManquant, setQtyManquant]   = useState("0");
   const [responsibleType, setRespType]  = useState("accident");
   const [responsibleId, setRespId]      = useState("");
-  const [responsibleName, setRespName]  = useState("");
   const [retourNotes, setRetourNotes]   = useState("");
   const [savingRetour, setSavingRetour] = useState(false);
 
   // Filtre historique
   const [searchHist, setSearchHist] = useState("");
 
-  // Stock disponible sur ce site
-  const mySiteId = user?.siteId;
-  const myTeams  = teams.filter((t: any) => t.siteId === mySiteId);
+  const mySiteId      = user?.siteId;
+  const myTeams       = teams.filter((t: any) => t.siteId === mySiteId);
   const siteEquipment = siteStock.filter((ss: any) => ss.siteId === mySiteId && (ss.qtyAvailable || 0) > 0);
-
-  // Mouvements de ce site
-  const myMovements = equipmentMovements.filter((mv: any) => mv.siteId === mySiteId);
+  const myMovements   = equipmentMovements.filter((mv: any) => mv.siteId === mySiteId);
   const pendingRetours = myMovements.filter((mv: any) => !mv.statusReturn && mv.movementType === "sortie");
+  const siteEmployees = employees.filter((e: any) => myTeams.some((t: any) => t.id === e.teamId));
 
-  // Historique filtré
   const histFiltered = myMovements.filter((mv: any) =>
     !searchHist ||
     mv.equipmentName?.toLowerCase().includes(searchHist.toLowerCase()) ||
@@ -50,6 +47,23 @@ export default function EquipmentMovements() {
   const histPag = usePagination(histFiltered);
 
   const selectedEq = siteEquipment.find((e: any) => e.equipmentId === sortieForm.equipmentId);
+
+  const good     = parseFloat(qtyGood)     || 0;
+  const casse    = parseFloat(qtyCasse)    || 0;
+  const manquant = parseFloat(qtyManquant) || 0;
+  const totalRetour = good + casse + manquant;
+  const qtyOut  = parseFloat(selectedMv?.qtyOut) || 0;
+  const retourOk = selectedMv ? totalRetour === qtyOut : false;
+
+  const openRetour = (mv: any) => {
+    setSelectedMv(mv);
+    setQtyGood(String(mv.qtyOut));
+    setQtyCasse("0");
+    setQtyManquant("0");
+    setRespType("accident");
+    setRespId("");
+    setRetourNotes("");
+  };
 
   const handleSortie = async () => {
     if (!sortieForm.equipmentId || !sortieForm.qty) return;
@@ -78,41 +92,22 @@ export default function EquipmentMovements() {
   };
 
   const handleRetour = async () => {
-    if (!selectedMv) return;
-    const good = parseFloat(qtyGood) || 0;
-    const casse = parseFloat(qtyCasse) || 0;
-    const manquant = parseFloat(qtyManquant) || 0;
-    const total = good + casse + manquant;
-    if (total !== parseFloat(selectedMv.qtyOut)) {
-      alert(`Total (${total}) doit égaler la quantité sortie (${selectedMv.qtyOut})`);
-      return;
-    }
+    if (!selectedMv || !retourOk) return;
     setSavingRetour(true);
     try {
       const emp = employees.find((e: any) => e.id === responsibleId);
       await createRetour(selectedMv.id, {
-        qtyGood: good,
-        qtyCasse: casse,
-        qtyManquant: manquant,
+        qtyGood:         good,
+        qtyCasse:        casse,
+        qtyManquant:     manquant,
         responsibleType: (casse > 0 || manquant > 0) ? responsibleType : null,
-        responsibleId: (casse > 0 || manquant > 0) ? responsibleId || null : null,
-        responsibleName: (casse > 0 || manquant > 0) ? (emp?.name || responsibleName || null) : null,
-        notes: retourNotes || null,
+        responsibleId:   (casse > 0 || manquant > 0) ? responsibleId || null : null,
+        responsibleName: (casse > 0 || manquant > 0) ? (emp?.name || null) : null,
+        notes:           retourNotes || null,
       });
       setSelectedMv(null);
-      setQtyGood("");
-      setQtyCasse("0");
-      setQtyManquant("0");
-      setRespType("accident");
-      setRespId("");
-      setRespName("");
-      setRetourNotes("");
     } finally { setSavingRetour(false); }
   };
-
-  const siteEmployees = employees.filter((e: any) =>
-    myTeams.some((t: any) => t.id === e.teamId)
-  );
 
   return (
     <DashboardLayout>
@@ -133,11 +128,90 @@ export default function EquipmentMovements() {
         </div>
       </div>
 
-      {/* ── Sortie Matin ── */}
+      {/* Modal retour — toujours dans le DOM mais caché */}
+      {selectedMv && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-bold mb-1">Retour — {selectedMv.equipmentName}</h2>
+            <p className="text-xs text-slate-500 mb-4">
+              Sorti : {selectedMv.qtyOut} unité(s) — Équipe : {selectedMv.teamName || "—"}
+            </p>
+            <div className="space-y-3">
+              <div className="bg-slate-50 rounded-lg p-3">
+                <p className="text-xs font-medium text-slate-600 mb-2">Quantité sortie : <strong>{selectedMv.qtyOut}</strong></p>
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-xs text-green-600 font-medium block mb-1">✅ Bon état</label>
+                    <input type="number" min="0" max={selectedMv.qtyOut}
+                      value={qtyGood} onChange={e => setQtyGood(e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-red-600 font-medium block mb-1">🔴 Cassé</label>
+                    <input type="number" min="0" max={selectedMv.qtyOut}
+                      value={qtyCasse} onChange={e => setQtyCasse(e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-600 font-medium block mb-1">⚫ Manquant</label>
+                    <input type="number" min="0" max={selectedMv.qtyOut}
+                      value={qtyManquant} onChange={e => setQtyManquant(e.target.value)}
+                      className="w-full border rounded px-2 py-1 text-sm" />
+                  </div>
+                </div>
+                <p className={`mt-2 text-xs font-medium ${retourOk?"text-green-600":"text-red-500"}`}>
+                  Total : {totalRetour} / {qtyOut} {retourOk?"✅":"⚠️ doit égaler la quantité sortie"}
+                </p>
+              </div>
+
+              {(casse > 0 || manquant > 0) && (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-500 mb-1 block">Responsabilité</label>
+                    <select value={responsibleType} onChange={e => setRespType(e.target.value)}
+                      className="w-full border rounded-lg px-3 py-2 text-sm">
+                      <option value="accident">Accident / Usure normale</option>
+                      <option value="employee">Employé précis</option>
+                      <option value="equipe">Équipe (Caisse Équipe)</option>
+                    </select>
+                  </div>
+                  {responsibleType === "employee" && (
+                    <div>
+                      <label className="text-xs text-slate-500 mb-1 block">Employé responsable</label>
+                      <select value={responsibleId} onChange={e => setRespId(e.target.value)}
+                        className="w-full border rounded-lg px-3 py-2 text-sm">
+                        <option value="">-- Sélectionner --</option>
+                        {siteEmployees.map((emp: any) => (
+                          <option key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
+              )}
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Notes</label>
+                <input value={retourNotes} onChange={e => setRetourNotes(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Observations..." />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleRetour} disabled={savingRetour || !retourOk}
+                className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
+                {savingRetour ? "Enregistrement..." : "✅ Confirmer retour"}
+              </button>
+              <button onClick={() => setSelectedMv(null)}
+                className="flex-1 border py-2 rounded-lg text-sm">Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sortie Matin */}
       {tab === "sortie" && (
         <div className="max-w-lg">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="font-semibold mb-4">📤 Enregistrer une sortie d'équipement</h2>
+            <h2 className="font-semibold mb-4">📤 Enregistrer une sortie</h2>
             {successSortie && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${successSortie.startsWith("✅")?"bg-green-50 text-green-700":"bg-red-50 text-red-700"}`}>
                 {successSortie}
@@ -145,7 +219,7 @@ export default function EquipmentMovements() {
             )}
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Équipement disponible sur site</label>
+                <label className="text-xs text-slate-500 mb-1 block">Équipement disponible</label>
                 <select value={sortieForm.equipmentId}
                   onChange={e => setSortieForm({...sortieForm, equipmentId: e.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
@@ -159,9 +233,7 @@ export default function EquipmentMovements() {
               </div>
               {selectedEq && (
                 <div className="bg-slate-50 rounded p-2 text-xs text-slate-600">
-                  Catégorie : <strong>{selectedEq.category==="epi"?"EPI":"Remboursable"}</strong> —
-                  Disponible : <strong>{selectedEq.qtyAvailable||0}</strong> —
-                  Sur terrain : <strong>{selectedEq.qtyOnTerrain||0}</strong>
+                  Disponible : <strong>{selectedEq.qtyAvailable||0}</strong> — Sur terrain : <strong>{selectedEq.qtyOnTerrain||0}</strong>
                 </div>
               )}
               <div>
@@ -189,11 +261,10 @@ export default function EquipmentMovements() {
                 </div>
               </div>
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Notes (optionnel)</label>
+                <label className="text-xs text-slate-500 mb-1 block">Notes</label>
                 <input value={sortieForm.notes}
                   onChange={e => setSortieForm({...sortieForm, notes: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 text-sm"
-                  placeholder="Observations..." />
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Observations..." />
               </div>
             </div>
             <button onClick={handleSortie} disabled={savingSortie||!sortieForm.equipmentId}
@@ -204,143 +275,46 @@ export default function EquipmentMovements() {
         </div>
       )}
 
-      {/* ── Retour Soir ── */}
+      {/* Retour Soir */}
       {tab === "retour" && (
-        <div className="space-y-3">
-          {/* Modal retour */}
-          {selectedMv && (
-            <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-              <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-                <h2 className="text-lg font-bold mb-1">Retour — {selectedMv.equipmentName}</h2>
-                <p className="text-xs text-slate-500 mb-4">
-                  Sorti : {selectedMv.qtyOut} unité(s) — Équipe : {selectedMv.teamName || "—"}
-                </p>
-                <div className="space-y-3">
-                  {/* Résumé quantités */}
-                  <div className="bg-slate-50 rounded-lg p-3 text-xs">
-                    <p className="font-medium text-slate-600 mb-2">Quantité sortie : <strong>{selectedMv.qtyOut}</strong></p>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-green-600 font-medium block mb-1">✅ Bon état</label>
-                        <input type="number" min="0" max={selectedMv.qtyOut}
-                          value={qtyGood}
-                          onChange={e => setQtyGood(e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="text-red-600 font-medium block mb-1">🔴 Cassé</label>
-                        <input type="number" min="0" max={selectedMv.qtyOut}
-                          value={qtyCasse}
-                          onChange={e => setQtyCasse(e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="text-slate-600 font-medium block mb-1">⚫ Manquant</label>
-                        <input type="number" min="0" max={selectedMv.qtyOut}
-                          value={qtyManquant}
-                          onChange={e => setQtyManquant(e.target.value)}
-                          className="w-full border rounded px-2 py-1 text-sm" placeholder="0" />
-                      </div>
-                    </div>
-                    {/* Validation total */}
-                    {selectedMv && (() => {
-                      const total = (parseFloat(qtyGood)||0) + (parseFloat(qtyCasse)||0) + (parseFloat(qtyManquant)||0);
-                      const qtyOut = parseFloat(selectedMv.qtyOut) || 0;
-                      const ok = total === qtyOut;
-                      return (
-                        <p className={`mt-2 text-xs font-medium ${ok?"text-green-600":"text-red-500"}`}>
-                          Total : {total} / {qtyOut} {ok?"✅":"⚠️ doit égaler la quantité sortie"}
-                        </p>
-                      );
-                    })()}
-                  </div>
-
-                  {/* Responsabilité si cassé ou manquant */}
-                  {((parseFloat(qtyCasse)||0) > 0 || (parseFloat(qtyManquant)||0) > 0) && (
-                    <>
-                      <div>
-                        <label className="text-xs text-slate-500 mb-1 block">Responsabilité</label>
-                        <select value={responsibleType} onChange={e => setRespType(e.target.value)}
-                          className="w-full border rounded-lg px-3 py-2 text-sm">
-                          <option value="accident">Accident / Usure normale</option>
-                          <option value="employee">Employé précis</option>
-                          <option value="equipe">Équipe (Caisse Équipe)</option>
-                        </select>
-                      </div>
-                      {responsibleType === "employee" && (
-                        <div>
-                          <label className="text-xs text-slate-500 mb-1 block">Employé responsable</label>
-                          <select value={responsibleId} onChange={e => setRespId(e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm">
-                            <option value="">-- Sélectionner --</option>
-                            {siteEmployees.map((emp: any) => (
-                              <option key={emp.id} value={emp.id}>{emp.name}</option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Notes</label>
-                    <input value={retourNotes} onChange={e => setRetourNotes(e.target.value)}
-                      className="w-full border rounded-lg px-3 py-2 text-sm"
-                      placeholder="Observations..." />
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <button onClick={handleRetour} disabled={savingRetour||((parseFloat(qtyGood)||0)+(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0))===0}
-                    className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
-                    {savingRetour ? "Enregistrement..." : "✅ Confirmer retour"}
-                  </button>
-                  <button onClick={() => setSelectedMv(null)}
-                    className="flex-1 border py-2 rounded-lg text-sm">Annuler</button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            <div className="px-4 py-3 bg-orange-50 border-b">
-              <h2 className="font-semibold text-orange-800 text-sm">
-                📥 Retours en attente ({pendingRetours.length})
-              </h2>
-            </div>
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-slate-500 text-left">
-                <tr>
-                  <th className="px-4 py-2">Date</th>
-                  <th className="px-4 py-2">Équipement</th>
-                  <th className="px-4 py-2">Équipe</th>
-                  <th className="px-4 py-2">Qté sortie</th>
-                  <th className="px-4 py-2">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pendingRetours.map((mv: any) => (
-                  <tr key={mv.id} className="border-t hover:bg-slate-50">
-                    <td className="px-4 py-2 text-xs text-slate-500">{mv.date}</td>
-                    <td className="px-4 py-2 font-medium">{mv.equipmentName}</td>
-                    <td className="px-4 py-2">{mv.teamName || "—"}</td>
-                    <td className="px-4 py-2 font-bold text-orange-600">{mv.qtyOut}</td>
-                    <td className="px-4 py-2">
-                      <button onClick={() => { setSelectedMv(mv); setQtyReturned(String(mv.qtyOut)); }}
-                        className="text-green-600 hover:underline text-xs">
-                        📥 Enregistrer retour
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {pendingRetours.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Aucun retour en attente</td></tr>
-                )}
-              </tbody>
-            </table>
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-orange-50 border-b">
+            <h2 className="font-semibold text-orange-800 text-sm">📥 Retours en attente ({pendingRetours.length})</h2>
           </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Équipement</th>
+                <th className="px-4 py-2">Équipe</th>
+                <th className="px-4 py-2">Qté sortie</th>
+                <th className="px-4 py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingRetours.map((mv: any) => (
+                <tr key={mv.id} className="border-t hover:bg-slate-50">
+                  <td className="px-4 py-2 text-xs text-slate-500">{mv.date}</td>
+                  <td className="px-4 py-2 font-medium">{mv.equipmentName}</td>
+                  <td className="px-4 py-2">{mv.teamName || "—"}</td>
+                  <td className="px-4 py-2 font-bold text-orange-600">{mv.qtyOut}</td>
+                  <td className="px-4 py-2">
+                    <button onClick={() => openRetour(mv)}
+                      className="text-green-600 hover:underline text-xs">
+                      📥 Enregistrer retour
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {pendingRetours.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Aucun retour en attente</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* ── Historique ── */}
+      {/* Historique */}
       {tab === "historique" && (
         <div className="space-y-3">
           <input value={searchHist} onChange={e => { setSearchHist(e.target.value); histPag.setPage(1); }}
