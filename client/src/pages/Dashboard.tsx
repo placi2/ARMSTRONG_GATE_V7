@@ -156,7 +156,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-2">
-            <AddAdvanceForm />
+            {role === "chef_equipe" && <AddAdvanceForm />}
             <Button onClick={handleExport} variant="outline" size="sm"><Download size={14} className="mr-2" /> Exporter CSV</Button>
           </div>
         </div>
