@@ -1,21 +1,18 @@
 import { useState, useEffect } from "react";
-import { useState, useEffect } from "react";
 import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 
 export default function EquipmentStock() {
   const { equipment, equipmentStock, siteStock, equipmentTransfers, transferToSite, sites, load } = useData() as any;
-useEffect(() => { load?.(); }, [tab]);
-  const [refreshed, setRefreshed] = useState(false);
-useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
-  
   const { user } = useAuth();
 
   const [tab, setTab] = useState<"central"|"sites"|"transfer"|"historique">("central");
-  const [transferForm, setForm]   = useState({ equipmentId:"", siteId:"", qty:"1" });
-  const [saving, setSaving]       = useState(false);
-  const [success, setSuccess]     = useState("");
+  const [transferForm, setForm] = useState({ equipmentId:"", siteId:"", qty:"1" });
+  const [saving, setSaving]     = useState(false);
+  const [success, setSuccess]   = useState("");
+
+  useEffect(() => { load?.(); }, [tab]);
 
   const selectedEq = equipment.find((e: any) => e.id === transferForm.equipmentId);
 
@@ -44,11 +41,8 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
     } finally { setSaving(false); }
   };
 
-  // Stock central groupé
   const centralStock = equipmentStock.filter((e: any) => (e.stockQty || 0) > 0);
-
-  // Stock par site
-  const stockBySite = sites.map((s: any) => ({
+  const stockBySite  = sites.map((s: any) => ({
     site: s,
     items: siteStock.filter((ss: any) => ss.siteId === s.id),
   })).filter((g: any) => g.items.length > 0);
@@ -57,20 +51,20 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
     <DashboardLayout>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-xl font-bold">Stock Équipements</h1>
-        <div className="flex gap-2">
-    {(["central","sites","transfer","historique"] as const).map(t => (
-  <button key={t} onClick={() => setTab(t)}
-    className={`px-3 py-1.5 rounded-lg text-sm ${tab===t?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
-    {t==="central"?"📦 Stock Central":t==="sites"?"🏗️ Stock par Site":t==="transfer"?"🔄 Transfert":"📋 Historique"}
-  </button>
-))}
+        <div className="flex gap-2 flex-wrap">
+          {(["central","sites","transfer","historique"] as const).map(tb => (
+            <button key={tb} onClick={() => setTab(tb)}
+              className={`px-3 py-1.5 rounded-lg text-sm ${tab===tb?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
+              {tb==="central"?"📦 Stock Central":tb==="sites"?"🏗️ Stock par Site":tb==="transfer"?"🔄 Transfert":"📋 Historique"}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* ── Stock Central ── */}
+      {/* Stock Central */}
       {tab === "central" && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-blue-50 border-b flex items-center justify-between">
+          <div className="px-4 py-3 bg-blue-50 border-b">
             <h2 className="font-semibold text-blue-800 text-sm">Stock Central — {centralStock.length} article(s)</h2>
           </div>
           <table className="w-full text-sm">
@@ -85,18 +79,18 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               </tr>
             </thead>
             <tbody>
-              {centralStock.map((e: any) => (
-                <tr key={e.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium">{e.name}</td>
+              {centralStock.map((eq: any) => (
+                <tr key={eq.id} className="border-t hover:bg-slate-50">
+                  <td className="px-4 py-2 font-medium">{eq.name}</td>
                   <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${e.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
-                      {e.category==="epi"?"EPI":"Remboursable"}
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${eq.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
+                      {eq.category==="epi"?"EPI":"Remboursable"}
                     </span>
                   </td>
-                  <td className="px-4 py-2 text-xs text-slate-500">{e.type}</td>
-                  <td className="px-4 py-2 font-bold text-green-700">{e.stockQty || 0}</td>
-                  <td className="px-4 py-2">{e.value || 0}$</td>
-                  <td className="px-4 py-2 text-amber-600 font-medium">{((e.stockQty||0)*(e.value||0)).toFixed(2)}$</td>
+                  <td className="px-4 py-2 text-xs text-slate-500">{eq.type}</td>
+                  <td className="px-4 py-2 font-bold text-green-700">{eq.stockQty || 0}</td>
+                  <td className="px-4 py-2">{eq.value || 0}$</td>
+                  <td className="px-4 py-2 text-amber-600 font-medium">{((eq.stockQty||0)*(eq.value||0)).toFixed(2)}$</td>
                 </tr>
               ))}
               {centralStock.length === 0 && (
@@ -107,7 +101,7 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
         </div>
       )}
 
-      {/* ── Stock par Site ── */}
+      {/* Stock par Site */}
       {tab === "sites" && (
         <div className="space-y-4">
           {stockBySite.map(({ site, items }: any) => (
@@ -151,7 +145,7 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
         </div>
       )}
 
-      {/* ── Transfert Central → Site ── */}
+      {/* Transfert */}
       {tab === "transfer" && (
         <div className="max-w-md">
           <div className="bg-white rounded-lg shadow-sm p-6">
@@ -165,11 +159,11 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Équipement</label>
                 <select value={transferForm.equipmentId}
-                  onChange={e => setForm({...transferForm, equipmentId: e.target.value})}
+                  onChange={ev => setForm({...transferForm, equipmentId: ev.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">-- Sélectionner --</option>
-                  {centralStock.map((e: any) => (
-                    <option key={e.id} value={e.id}>{e.name} (stock: {e.stockQty||0})</option>
+                  {centralStock.map((eq: any) => (
+                    <option key={eq.id} value={eq.id}>{eq.name} (stock: {eq.stockQty||0})</option>
                   ))}
                 </select>
               </div>
@@ -183,17 +177,17 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Site destinataire</label>
                 <select value={transferForm.siteId}
-                  onChange={e => setForm({...transferForm, siteId: e.target.value})}
+                  onChange={ev => setForm({...transferForm, siteId: ev.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">-- Sélectionner --</option>
-                  {sites.map((s: any) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  {sites.map((si: any) => <option key={si.id} value={si.id}>{si.name}</option>)}
                 </select>
               </div>
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Quantité à transférer</label>
                 <input type="number" min="1" max={selectedEq?.stockQty||999}
                   value={transferForm.qty}
-                  onChange={e => setForm({...transferForm, qty: e.target.value})}
+                  onChange={ev => setForm({...transferForm, qty: ev.target.value})}
                   className="w-full border rounded-lg px-3 py-2 text-sm" />
               </div>
             </div>
@@ -204,8 +198,9 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
           </div>
         </div>
       )}
-      {/* ── Historique Transferts ── */}
-      {tab === "history" && (
+
+      {/* Historique */}
+      {tab === "historique" && (
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="px-4 py-3 bg-slate-50 border-b">
             <h2 className="font-semibold text-slate-700 text-sm">📋 Historique des transferts ({equipmentTransfers.length})</h2>
@@ -226,7 +221,7 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
               {equipmentTransfers.map((tr: any) => (
                 <tr key={tr.id} className="border-t hover:bg-slate-50">
                   <td className="px-4 py-2 text-xs text-slate-500">
-                    {new Date(tr.createdAt).toLocaleDateString("fr-FR")}
+                    {new Date(tr.createdAt).toLocaleDateString("fr-FR", {day:"2-digit",month:"2-digit",year:"numeric"})}
                   </td>
                   <td className="px-4 py-2 font-medium">{tr.equipmentName}</td>
                   <td className="px-4 py-2">{tr.siteName}</td>
@@ -238,49 +233,6 @@ useEffect(() => { if (!refreshed) { load?.(); setRefreshed(true); } }, []);
                   <td className="px-4 py-2 font-bold">{tr.qty}</td>
                   <td className="px-4 py-2">{tr.unitValue}$</td>
                   <td className="px-4 py-2 text-slate-500">{tr.transferredByName || tr.transferredBy || "—"}</td>
-                </tr>
-              ))}
-              {equipmentTransfers.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Aucun transfert effectué</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {/* ── Historique Transferts ── */}
-      {tab === "historique" && (
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-4 py-3 bg-slate-50 border-b">
-            <h2 className="font-semibold text-slate-700 text-sm">📋 Historique des transferts ({equipmentTransfers.length})</h2>
-          </div>
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="px-4 py-2">Date</th>
-                <th className="px-4 py-2">Équipement</th>
-                <th className="px-4 py-2">Site destinataire</th>
-                <th className="px-4 py-2">Catégorie</th>
-                <th className="px-4 py-2">Qté</th>
-                <th className="px-4 py-2">Prix unit.</th>
-                <th className="px-4 py-2">Transféré par</th>
-              </tr>
-            </thead>
-            <tbody>
-              {equipmentTransfers.map((t: any) => (
-                <tr key={t.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-2 text-xs text-slate-500">
-                    {new Date(t.createdAt).toLocaleDateString("fr-FR", {day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"})}
-                  </td>
-                  <td className="px-4 py-2 font-medium">{t.equipmentName}</td>
-                  <td className="px-4 py-2">{t.siteName}</td>
-                  <td className="px-4 py-2">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${t.category==="epi"?"bg-red-100 text-red-700":"bg-blue-100 text-blue-700"}`}>
-                      {t.category==="epi"?"EPI":"Remboursable"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 font-bold">{t.qty}</td>
-                  <td className="px-4 py-2">{t.unitValue}$</td>
-                  <td className="px-4 py-2 text-slate-500">{t.transferredByName || t.transferredBy || "—"}</td>
                 </tr>
               ))}
               {equipmentTransfers.length === 0 && (
