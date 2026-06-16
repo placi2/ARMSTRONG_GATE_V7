@@ -62,7 +62,7 @@ export function DataProvider({children}:{children:React.ReactNode}){
   useEffect(()=>{load();},[load]);
   useEffect(()=>{
     if(!isAuthenticated)return;
-    const id=setInterval(load,10000);
+    const id=setInterval(load,60000);
     return()=>clearInterval(id);
   },[isAuthenticated,load]);
   const addSite=useCallback(async(s:Omit<Site,"id">):Promise<Site>=>{const n={...s,id:`S${uid()}`};await api.createSite(n);await load();return n;},[load]);

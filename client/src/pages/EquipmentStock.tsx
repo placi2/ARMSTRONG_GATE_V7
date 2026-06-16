@@ -274,7 +274,7 @@ export default function EquipmentStock() {
             <th className="px-4 py-2">Catégorie</th>
             <th className="px-4 py-2">Qté</th>
             <th className="px-4 py-2">Prix unit.</th>
-            <th className="px-4 py-2">Transféré par</th>
+            
           </tr>
         </thead>
         <tbody>
