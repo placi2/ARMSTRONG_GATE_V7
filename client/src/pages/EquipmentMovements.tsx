@@ -288,7 +288,7 @@ export default function EquipmentMovements() {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <button onClick={handleRetour} disabled={savingRetour||!(parseFloat(qtyGood)||0)+(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0)}
+                  <button onClick={handleRetour} disabled={savingRetour||((parseFloat(qtyGood)||0)+(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0))===0}
                     className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
                     {savingRetour ? "Enregistrement..." : "✅ Confirmer retour"}
                   </button>
