@@ -6,7 +6,7 @@ export interface AppSettings {
   goldPriceUsd: number; goldPrice: number;        // goldPrice = alias
   currency: Currency;
   exchangeRateCdf: number; exchangeRate: number;  // exchangeRate = alias
-  companyName: string; customLogo: string | null;
+  companyName: string; customLogo: string | null; email: string | null; phone: string | null; address: string | null;
   reportDay: number; reportRecipients: string; reportFormat: string;
 }
 
@@ -26,7 +26,7 @@ interface SettingsCtx {
 const DEFAULTS: AppSettings = {
   goldPriceUsd:65, goldPrice:65, currency:"USD",
   exchangeRateCdf:2800, exchangeRate:2800,
-  companyName:"ARMSTRONG GATE", customLogo:null,
+  companyName:"ARMSTRONG GATE", customLogo:null, email:null, phone:null, address:null,
   reportDay:1, reportRecipients:"", reportFormat:"PDF",
 };
 

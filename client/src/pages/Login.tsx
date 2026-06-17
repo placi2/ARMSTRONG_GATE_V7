@@ -13,7 +13,7 @@ export default function Login() {
   const [, nav]   = useLocation();
 
   // Read logo saved in localStorage by Settings
-  const logo = (() => {
+  const companyName = (() => { try { const s = localStorage.getItem("ag_currentUser"); const set = localStorage.getItem("ag_settings"); if (set) { const p = JSON.parse(set); if (p.companyName) return p.companyName; } } catch {} return "ARMSTRONG GATE"; })();const logo = (() => {
     try {
       const d = localStorage.getItem("ag_logo_image");
       if (d) return d;
@@ -52,7 +52,7 @@ export default function Login() {
                 : <span style={{ fontSize: 40, lineHeight: 1 }}>⛏</span>
               }
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 tracking-wide">ARMSTRONG GATE</h1>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-wide">{companyName}</h1>
             <p className="text-slate-400 text-sm mt-1">Gestion d'Exploitation Aurifère</p>
           </div>
 

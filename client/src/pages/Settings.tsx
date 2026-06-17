@@ -161,7 +161,7 @@ export default function Settings() {
   const [goldPrice,    setGoldPrice]    = useState(String(settings.goldPriceUsd));
   const [exchangeRate, setExchangeRate] = useState(String(settings.exchangeRateCdf));
   const [currency,     setCurrency]     = useState(settings.currency);
-  const [companyName,  setCompanyName]  = useState(settings.companyName||"");
+  const [companyName,  setCompanyName]  = useState(settings.companyName||"");const [companyEmail, setCompanyEmail] = useState(settings.email||"");const [companyPhone, setCompanyPhone] = useState(settings.phone||"");const [companyAddress, setCompanyAddress] = useState(settings.address||"");
   const [primaryColor, setPrimaryColor] = useState(()=>localStorage.getItem("ag_primaryColor")||"#b8860b");
 
   if (user?.role !== "pdg") {
@@ -172,7 +172,7 @@ export default function Settings() {
     const p=parseFloat(goldPrice), r=parseFloat(exchangeRate);
     if(isNaN(p)||p<=0){toast.error("Prix or invalide");return;}
     if(isNaN(r)||r<=0){toast.error("Taux invalide");return;}
-    updateSettings({goldPriceUsd:p,goldPrice:p,exchangeRateCdf:r,exchangeRate:r,currency,companyName});
+    updateSettings({goldPriceUsd:p,goldPrice:p,exchangeRateCdf:r,exchangeRate:r,currency,companyName,email:companyEmail,phone:companyPhone,address:companyAddress});
     toast.success("Paramètres sauvegardés ✓");
   };
 
@@ -213,6 +213,9 @@ export default function Settings() {
             <CardHeader><CardTitle className="text-base flex items-center gap-2"><DollarSign size={18} className="text-amber-500"/>Prix & Devise</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div><Label>Nom de l'entreprise</Label><Input value={companyName} onChange={e=>setCompanyName(e.target.value)} className="mt-1"/></div>
+              <div><Label>Email société</Label><Input type="email" value={companyEmail} onChange={e=>setCompanyEmail(e.target.value)} className="mt-1" placeholder="contact@societe.com"/></div>
+<div><Label>Téléphone</Label><Input value={companyPhone} onChange={e=>setCompanyPhone(e.target.value)} className="mt-1" placeholder="+243 XXX XXX XXX"/></div>
+<div className="col-span-2"><Label>Adresse siège</Label><Input value={companyAddress} onChange={e=>setCompanyAddress(e.target.value)} className="mt-1" placeholder="123 Rue principale, Ville, Pays"/></div>
               <div><Label>Devise</Label>
                 <select className="w-full border rounded-lg px-3 py-2 text-sm bg-white mt-1" value={currency} onChange={e=>setCurrency(e.target.value as any)}>
                   <option value="USD">$ Dollar (USD)</option><option value="CDF">FC Franc Congolais (CDF)</option>
