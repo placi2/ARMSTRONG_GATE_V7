@@ -126,7 +126,7 @@ export function useRbac(): RbacCapabilities {
     canDeleteEquipment:    is("pdg"),
 
     // Advances
-    canAddAdvance:         is("pdg","directeur","rh"),
+    canAddAdvance:         is("pdg","directeur"),
     canDeleteAdvance:      is("pdg"),
 
     // Attendance
