@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import Pagination, { usePagination } from "@/components/Pagination";
 import * as XLSX from "xlsx";
+import { useSettings } from "@/contexts/SettingsContext";
 
 const today    = () => new Date().toISOString().split("T")[0];
 const firstDay = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
@@ -17,6 +18,7 @@ const STATUS_OPTIONS = [
 export default function Attendance() {
   const { employees, teams, sites, attendance, advances, saveAttendance } = useData() as any;
   const { user } = useAuth();
+  const { settings } = useSettings();
 
   const [date, setDate]       = useState(today());
   const [saving, setSaving]   = useState(false);
@@ -178,25 +180,44 @@ export default function Attendance() {
     XLSX.writeFile(wb, `rapport-paie-${dateFrom}-${dateTo}.xlsx`);
   };
 
-  const exportPDF = () => {
+const exportPDF = () => {
+    const logo = settings.customLogo || "";
     const printContent = `
       <html>
       <head>
         <title>Rapport de Paie — ${dateFrom} au ${dateTo}</title>
         <style>
-          body { font-family: Arial, sans-serif; font-size: 12px; }
-          h1 { font-size: 16px; margin-bottom: 4px; }
-          p { color: #666; margin-bottom: 16px; }
+          body { font-family: Arial, sans-serif; font-size: 12px; margin: 20px; }
+          .header { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; border-bottom: 2px solid #b8860b; padding-bottom: 12px; }
+          .logo { width: 60px; height: 60px; object-fit: cover; border-radius: 8px; }
+          .logo-placeholder { width: 60px; height: 60px; background: #f1f5f9; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 28px; }
+          .company-info h1 { font-size: 18px; font-weight: bold; color: #1a1a1a; margin: 0; }
+          .company-info p { font-size: 11px; color: #666; margin: 2px 0; }
+          .report-title { margin: 12px 0 4px; font-size: 14px; font-weight: bold; }
+          .period { color: #666; font-size: 11px; margin-bottom: 16px; }
           table { width: 100%; border-collapse: collapse; }
-          th { background: #f1f5f9; padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 11px; }
-          td { padding: 7px 8px; border: 1px solid #e2e8f0; }
+          th { background: #fef3c7; padding: 7px 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 11px; }
+          td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 11px; }
           tr:nth-child(even) { background: #f8fafc; }
-          .total { font-weight: bold; background: #fef3c7; }
+          .total-row { font-weight: bold; background: #fef3c7 !important; }
+          .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #888; text-align: center; }
         </style>
       </head>
       <body>
-        <h1>Rapport de Paie</h1>
-        <p>Période : ${new Date(dateFrom).toLocaleDateString("fr-FR")} au ${new Date(dateTo).toLocaleDateString("fr-FR")} — Jours ouvrables : ${workingDays}j</p>
+        <div class="header">
+          ${logo
+            ? `<img src="${logo}" class="logo" alt="logo"/>`
+            : `<div class="logo-placeholder">⛏</div>`
+          }
+          <div class="company-info">
+            <h1>${settings.companyName || "ARMSTRONG GATE"}</h1>
+            ${settings.email ? `<p>📧 ${settings.email}</p>` : ""}
+            ${settings.phone ? `<p>📞 ${settings.phone}</p>` : ""}
+            ${settings.address ? `<p>📍 ${settings.address}</p>` : ""}
+          </div>
+        </div>
+        <p class="report-title">Rapport de Paie</p>
+        <p class="period">Période : ${new Date(dateFrom).toLocaleDateString("fr-FR")} au ${new Date(dateTo).toLocaleDateString("fr-FR")} — Jours ouvrables : ${workingDays}j</p>
         <table>
           <thead>
             <tr>
@@ -218,7 +239,7 @@ export default function Attendance() {
                 <td><strong>$${salaireNet.toFixed(2)}</strong></td>
               </tr>
             `).join("")}
-            <tr class="total">
+            <tr class="total-row">
               <td colspan="4"><strong>TOTAL</strong></td>
               <td><strong>$${payReport.reduce((s: number,r: any)=>s+r.salaireMensuel,0)}</strong></td>
               <td><strong>$${payReport.reduce((s: number,r: any)=>s+r.salaireGagne,0).toFixed(2)}</strong></td>
@@ -227,6 +248,12 @@ export default function Attendance() {
             </tr>
           </tbody>
         </table>
+        <div class="footer">
+          ${settings.companyName || "ARMSTRONG GATE"}
+          ${settings.email ? ` | ${settings.email}` : ""}
+          ${settings.phone ? ` | ${settings.phone}` : ""}
+          ${settings.address ? ` | ${settings.address}` : ""}
+        </div>
       </body>
       </html>
     `;
