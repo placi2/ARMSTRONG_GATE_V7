@@ -14,7 +14,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Attendance() {
-  const { employees, teams, sites, attendance, saveAttendance } = useData() as any;
+  const { employees, teams, sites, attendance, advances, saveAttendance } = useData() as any;
   const { user } = useAuth();
 
   const [date, setDate]       = useState(today());
@@ -28,7 +28,7 @@ export default function Attendance() {
   const [filterSite, setFilterSite] = useState("all");
   const [filterTeam, setFilterTeam] = useState("all");
   const [searchEmp, setSearchEmp]   = useState("");
-
+  const [rhTab, setRhTab] = useState<"presences"|"paie">("presences");
   const isRH       = user?.role === "rh";
   const myTeamId   = user?.teamId;
   const mySiteId   = user?.siteId;
@@ -107,14 +107,77 @@ export default function Attendance() {
 
   const rhPag = usePagination(rhReport);
 
+  // Calcul jours ouvrables entre deux dates (lun-sam)
+  const getWorkingDays = (from: string, to: string) => {
+    let count = 0;
+    const d = new Date(from);
+    const end = new Date(to);
+    while (d <= end) {
+      const day = d.getDay();
+      if (day !== 0) count++; // exclure dimanche
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  };
+
+  const workingDays = getWorkingDays(dateFrom, dateTo);
+
+  const payReport = rhEmployees.map((emp: any) => {
+    const empAtt = attendance.filter((a: any) =>
+      a.employeeId === emp.id && a.date >= dateFrom && a.date <= dateTo
+    );
+    const joursPresent  = empAtt.filter((a: any) => a.status === "present").length;
+    const joursAbsent   = empAtt.filter((a: any) => a.status === "absent").length;
+    const joursConge    = empAtt.filter((a: any) => a.status === "conge").length;
+    const salaireMensuel = emp.monthlySalary || 0;
+    const salaireGagne  = workingDays > 0
+      ? (joursPresent / workingDays) * salaireMensuel
+      : 0;
+    const totalAvances  = emp.totalAdvances || 0;
+    const salaireNet    = Math.max(0, salaireGagne - totalAvances);
+    const team = teams.find((t: any) => t.id === emp.teamId);
+    const site = sites.find((s: any) => s.id === team?.siteId);
+    return { emp, team, site, joursPresent, joursAbsent, joursConge, workingDays, salaireMensuel, salaireGagne, totalAvances, salaireNet };
+  });
+
+  const payPag = usePagination(payReport);
+
+  const exportCSV = () => {
+    const headers = ["Employé","Site","Équipe","Jours ouvrables","Présent","Absent","Congé","Salaire base","Salaire gagné","Avances","Net à payer"];
+    const rows = payReport.map(({ emp, site, team, joursPresent, joursAbsent, joursConge, workingDays, salaireMensuel, salaireGagne, totalAvances, salaireNet }: any) =>
+      [emp.name, site?.name||"", team?.name||"", workingDays, joursPresent, joursAbsent, joursConge, salaireMensuel, salaireGagne.toFixed(2), totalAvances, salaireNet.toFixed(2)]
+    );
+    const csv = [headers, ...rows].map(r => r.join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href = url;
+    a.download = `rapport-paie-${dateFrom}-${dateTo}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   if (isRH) {
     return (
+      
       <DashboardLayout>
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-          <h1 className="text-xl font-bold">Rapport de Présences</h1>
+          <h1 className="text-xl font-bold">
+            {rhTab === "presences" ? "Rapport de Présences" : "Rapport de Paie"}
+          </h1>
+          <div className="flex gap-2">
+            <button onClick={() => setRhTab("presences")}
+              className={`px-3 py-1.5 rounded-lg text-sm ${rhTab==="presences"?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
+              📋 Présences
+            </button>
+            <button onClick={() => setRhTab("paie")}
+              className={`px-3 py-1.5 rounded-lg text-sm ${rhTab==="paie"?"bg-amber-600 text-white":"border hover:bg-slate-50"}`}>
+              📊 Rapport de Paie
+            </button>
+          </div>
         </div>
 
-        {/* Filtres */}
+        {/* Filtres communs */}
         <div className="bg-white rounded-lg shadow-sm p-4 mb-4 flex gap-3 flex-wrap">
           <div className="flex items-center gap-2">
             <label className="text-xs text-slate-500">Du</label>
@@ -141,69 +204,142 @@ export default function Attendance() {
             placeholder="🔍 Rechercher employé..." />
         </div>
 
-        {/* Stats globales */}
-        <div className="grid grid-cols-4 gap-3 mb-4">
-          <div className="bg-slate-50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-slate-700">{rhReport.length}</p>
-            <p className="text-xs text-slate-500">Employés</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-green-700">{rhReport.reduce((s,r)=>s+r.joursPresent,0)}</p>
-            <p className="text-xs text-green-600">Total jours présents</p>
-          </div>
-          <div className="bg-red-50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-red-700">{rhReport.reduce((s,r)=>s+r.joursAbsent,0)}</p>
-            <p className="text-xs text-red-600">Total jours absents</p>
-          </div>
-          <div className="bg-amber-50 rounded-lg p-3 text-center">
-            <p className="text-2xl font-bold text-amber-700">
-              ${rhReport.reduce((s,r)=>s+r.salaireGagne,0).toFixed(0)}
-            </p>
-            <p className="text-xs text-amber-600">Masse salariale gagnée</p>
-          </div>
-        </div>
+        {/* ── Onglet Présences ── */}
+        {rhTab === "presences" && (
+          <>
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              <div className="bg-slate-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-slate-700">{rhReport.length}</p>
+                <p className="text-xs text-slate-500">Employés</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-700">{rhReport.reduce((s: number,r: any)=>s+r.joursPresent,0)}</p>
+                <p className="text-xs text-green-600">Jours présents</p>
+              </div>
+              <div className="bg-red-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-red-700">{rhReport.reduce((s: number,r: any)=>s+r.joursAbsent,0)}</p>
+                <p className="text-xs text-red-600">Jours absents</p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-amber-700">
+                  ${rhReport.reduce((s: number,r: any)=>s+r.salaireGagne,0).toFixed(0)}
+                </p>
+                <p className="text-xs text-amber-600">Masse salariale gagnée</p>
+              </div>
+            </div>
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-left">
+                  <tr>
+                    <th className="px-4 py-2">Employé</th>
+                    <th className="px-4 py-2">Site</th>
+                    <th className="px-4 py-2">Équipe</th>
+                    <th className="px-4 py-2 text-green-600">Présent</th>
+                    <th className="px-4 py-2 text-red-600">Absent</th>
+                    <th className="px-4 py-2 text-blue-600">Congé</th>
+                    <th className="px-4 py-2">Salaire base</th>
+                    <th className="px-4 py-2 text-amber-600">Salaire gagné</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(rhPag.paginated as any[]).map(({ emp, team, site, joursPresent, joursAbsent, joursConge, salaireMensuel, salaireGagne }: any) => (
+                    <tr key={emp.id} className="border-t hover:bg-slate-50">
+                      <td className="px-4 py-2 font-medium">{emp.name}</td>
+                      <td className="px-4 py-2 text-xs text-slate-500">{site?.name || "—"}</td>
+                      <td className="px-4 py-2 text-xs text-slate-500">{team?.name || "—"}</td>
+                      <td className="px-4 py-2 font-bold text-green-700">{joursPresent}j</td>
+                      <td className="px-4 py-2 text-red-600">{joursAbsent}j</td>
+                      <td className="px-4 py-2 text-blue-600">{joursConge}j</td>
+                      <td className="px-4 py-2">${salaireMensuel}</td>
+                      <td className="px-4 py-2 font-bold text-amber-600">${salaireGagne.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {rhReport.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Aucun pointage pour cette période</td></tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="px-4">
+                <Pagination total={rhPag.total} page={rhPag.page} perPage={rhPag.perPage}
+                  onPageChange={rhPag.setPage} onPerPageChange={rhPag.setPerPage} />
+              </div>
+            </div>
+          </>
+        )}
 
-        {/* Tableau rapport */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-500 text-left">
-              <tr>
-                <th className="px-4 py-2">Employé</th>
-                <th className="px-4 py-2">Site</th>
-                <th className="px-4 py-2">Équipe</th>
-                <th className="px-4 py-2 text-green-600">Présent</th>
-                <th className="px-4 py-2 text-red-600">Absent</th>
-                <th className="px-4 py-2 text-blue-600">Congé</th>
-                <th className="px-4 py-2">Salaire base</th>
-                <th className="px-4 py-2 text-amber-600">Salaire gagné</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(rhPag.paginated as any[]).map(({ emp, team, site, joursPresent, joursAbsent, joursConge, salaireMensuel, salaireGagne }: any) => (
-                <tr key={emp.id} className="border-t hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium">{emp.name}</td>
-                  <td className="px-4 py-2 text-xs text-slate-500">{site?.name || "—"}</td>
-                  <td className="px-4 py-2 text-xs text-slate-500">{team?.name || "—"}</td>
-                  <td className="px-4 py-2 font-bold text-green-700">{joursPresent}j</td>
-                  <td className="px-4 py-2 text-red-600">{joursAbsent}j</td>
-                  <td className="px-4 py-2 text-blue-600">{joursConge}j</td>
-                  <td className="px-4 py-2">${salaireMensuel}</td>
-                  <td className="px-4 py-2 font-bold text-amber-600">${salaireGagne.toFixed(2)}</td>
-                </tr>
-              ))}
-              {rhReport.length === 0 && (
-                <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Aucun pointage pour cette période</td></tr>
-              )}
-            </tbody>
-          </table>
-          <div className="px-4">
-            <Pagination total={rhPag.total} page={rhPag.page} perPage={rhPag.perPage}
-              onPageChange={rhPag.setPage} onPerPageChange={rhPag.setPerPage} />
-          </div>
-        </div>
+        {/* ── Onglet Rapport de Paie ── */}
+        {rhTab === "paie" && (
+          <>
+            <div className="flex justify-between items-center mb-3">
+              <div className="text-sm text-slate-500">
+                Période : <strong>{new Date(dateFrom).toLocaleDateString("fr-FR")}</strong> au <strong>{new Date(dateTo).toLocaleDateString("fr-FR")}</strong> —
+                Jours ouvrables : <strong>{workingDays}j</strong>
+              </div>
+              <button onClick={exportCSV}
+                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
+                📊 Exporter CSV
+              </button>
+            </div>
+
+            {/* Stats paie */}
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="bg-blue-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-blue-700">${payReport.reduce((s: number,r: any)=>s+r.salaireMensuel,0)}</p>
+                <p className="text-xs text-blue-600">Masse salariale totale</p>
+              </div>
+              <div className="bg-amber-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-amber-700">${payReport.reduce((s: number,r: any)=>s+r.salaireGagne,0).toFixed(0)}</p>
+                <p className="text-xs text-amber-600">Total salaires gagnés</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-3 text-center">
+                <p className="text-2xl font-bold text-green-700">${payReport.reduce((s: number,r: any)=>s+r.salaireNet,0).toFixed(0)}</p>
+                <p className="text-xs text-green-600">Total net à payer</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 text-slate-500 text-left">
+                  <tr>
+                    <th className="px-4 py-2">Employé</th>
+                    <th className="px-4 py-2">Site / Équipe</th>
+                    <th className="px-4 py-2">Jours ouvr.</th>
+                    <th className="px-4 py-2 text-green-600">Présent</th>
+                    <th className="px-4 py-2">Salaire base</th>
+                    <th className="px-4 py-2 text-amber-600">Salaire gagné</th>
+                    <th className="px-4 py-2 text-red-600">Avances</th>
+                    <th className="px-4 py-2 text-green-700">Net à payer</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(payPag.paginated as any[]).map(({ emp, team, site, joursPresent, workingDays: wd, salaireMensuel, salaireGagne, totalAvances, salaireNet }: any) => (
+                    <tr key={emp.id} className="border-t hover:bg-slate-50">
+                      <td className="px-4 py-2 font-medium">{emp.name}</td>
+                      <td className="px-4 py-2 text-xs text-slate-500">{site?.name || "—"} / {team?.name || "—"}</td>
+                      <td className="px-4 py-2 text-slate-500">{wd}j</td>
+                      <td className="px-4 py-2 font-bold text-green-700">{joursPresent}j</td>
+                      <td className="px-4 py-2">${salaireMensuel}</td>
+                      <td className="px-4 py-2 font-bold text-amber-600">${salaireGagne.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-red-500">-${totalAvances}</td>
+                      <td className="px-4 py-2 font-bold text-green-700">${salaireNet.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                  {payReport.length === 0 && (
+                    <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Aucun employé trouvé</td></tr>
+                  )}
+                </tbody>
+              </table>
+              <div className="px-4">
+                <Pagination total={payPag.total} page={payPag.page} perPage={payPag.perPage}
+                  onPageChange={payPag.setPage} onPerPageChange={payPag.setPerPage} />
+              </div>
+            </div>
+          </>
+        )}
       </DashboardLayout>
     );
   }
+  
 
   // ── Vue Chef d'Équipe : pointage ──
   return (
