@@ -44,6 +44,7 @@ function Router() {
       <Route path="/teams"                  component={() => <ProtectedRoute><Teams /></ProtectedRoute>} />
       <Route path="/team/:id"               component={() => <ProtectedRoute><TeamProfile /></ProtectedRoute>} />
       <Route path="/employees"              component={() => <ProtectedRoute><Employees /></ProtectedRoute>} />
+      <Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route path="/employee/:id"           component={() => <ProtectedRoute><EmployeeProfile /></ProtectedRoute>} />
       <Route path="/production"             component={() => <ProtectedRoute><Production /></ProtectedRoute>} />
       <Route path="/expenses"               component={() => <ProtectedRoute><Expenses /></ProtectedRoute>} />
@@ -58,7 +59,7 @@ function Router() {
       <Route path="/custom-reports"         component={() => <ProtectedRoute><CustomReports /></ProtectedRoute>} />
       <Route path="/settings"               component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/audit"                  component={() => <ProtectedRoute><AuditHistory /></ProtectedRoute>} />
-      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} /><Route path="/equipment-stock"        component={() => <ProtectedRoute><EquipmentStock /></ProtectedRoute>} /><Route path="/equipment-movements"    component={() => <ProtectedRoute><EquipmentMovements /></ProtectedRoute>} /><Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} />
+      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} /><Route path="/equipment-stock"        component={() => <ProtectedRoute><EquipmentStock /></ProtectedRoute>} /><Route path="/equipment-movements"    component={() => <ProtectedRoute><EquipmentMovements /></ProtectedRoute>} />
       <Route component={NotFound} />
     </Switch>
   );
