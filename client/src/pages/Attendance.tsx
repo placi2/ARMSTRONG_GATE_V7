@@ -19,12 +19,13 @@ export default function Attendance() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
 
-  const myTeamId  = user?.teamId;
-  const mySiteId  = user?.siteId;
-  const myTeam    = teams.find((t: any) => t.id === myTeamId);
-
-  // Employés de mon équipe
-  const myEmployees = employees.filter((e: any) => e.teamId === myTeamId);
+  const myTeamId    = user?.teamId;
+  const mySiteId    = user?.siteId;
+  const isRH        = user?.role === "rh";
+  const myTeam      = teams.find((t: any) => t.id === myTeamId);
+  const myEmployees = isRH
+    ? employees
+    : employees.filter((e: any) => e.teamId === myTeamId);
 
   // Pointage existant pour la date sélectionnée
   const existingForDate = attendance.filter((a: any) => a.date === date && a.teamId === myTeamId);
@@ -52,7 +53,7 @@ export default function Attendance() {
         employeeId:   emp.id,
         employeeName: emp.name,
         teamId:       myTeamId,
-        siteId:       mySiteId || myTeam?.siteId,
+        siteId: isRH ? (teams.find((t:any)=>t.id===emp.teamId)?.siteId || null) : (mySiteId || myTeam?.siteId),
         date,
         status:       getStatus(emp.id),
       }));
