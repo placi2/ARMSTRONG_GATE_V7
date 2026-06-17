@@ -26,8 +26,7 @@ const [transferItems, setTransferItems]   = useState<{equipmentId:string;qty:str
 
   useEffect(() => { load?.(); }, []);
 
-  const selectedEq = equipment.find((e: any) => e.id === transferForm.equipmentId);
-
+  
   const addTransferItem = () => setTransferItems([...transferItems, { equipmentId:"", qty:"1" }]);
   const updateTransferItem = (i: number, field: string, val: string) => {
     const arr = [...transferItems];
