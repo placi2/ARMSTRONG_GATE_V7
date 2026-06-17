@@ -30,7 +30,7 @@ import WeeklyReports from "./pages/WeeklyReports";
 import CustomReports from "./pages/CustomReports";
 import Settings from "./pages/Settings";
 import AuditHistory from "./pages/AuditHistory";
-import Requests from "./pages/Requests";import EquipmentStock from "./pages/EquipmentStock";import EquipmentMovements from "./pages/EquipmentMovements";
+import Requests from "./pages/Requests";import EquipmentStock from "./pages/EquipmentStock";import EquipmentMovements from "./pages/EquipmentMovements";import Attendance from "./pages/Attendance";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -58,7 +58,7 @@ function Router() {
       <Route path="/custom-reports"         component={() => <ProtectedRoute><CustomReports /></ProtectedRoute>} />
       <Route path="/settings"               component={() => <ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="/audit"                  component={() => <ProtectedRoute><AuditHistory /></ProtectedRoute>} />
-      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} /><Route path="/equipment-stock"        component={() => <ProtectedRoute><EquipmentStock /></ProtectedRoute>} /><Route path="/equipment-movements"    component={() => <ProtectedRoute><EquipmentMovements /></ProtectedRoute>} />
+      <Route path="/requests"               component={() => <ProtectedRoute><Requests /></ProtectedRoute>} /><Route path="/equipment-stock"        component={() => <ProtectedRoute><EquipmentStock /></ProtectedRoute>} /><Route path="/equipment-movements"    component={() => <ProtectedRoute><EquipmentMovements /></ProtectedRoute>} /><Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route component={NotFound} />
     </Switch>
   );

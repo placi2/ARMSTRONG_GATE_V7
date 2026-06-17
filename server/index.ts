@@ -76,6 +76,19 @@ async function initDB(){
   
   `).catch(()=>{});
   await pool.query(`
+    CREATE TABLE IF NOT EXISTS attendance(
+      id TEXT PRIMARY KEY,
+      employee_id TEXT,
+      employee_name TEXT,
+      team_id TEXT,
+      site_id TEXT,
+      date TEXT,
+      status TEXT DEFAULT 'present',
+      created_by TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `).catch(()=>{});
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS equipment_movements(
       id TEXT PRIMARY KEY,
       equipment_site_stock_id TEXT,
@@ -98,7 +111,9 @@ async function initDB(){
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
     );
-  `).catch(()=>{});
+  `)
+  .catch(()=>{});
+  await pool.query(`ALTER TABLE attendance ADD CONSTRAINT attendance_employee_date UNIQUE(employee_id,date)`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'remboursable'`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'stock'`).catch(()=>{});
@@ -179,6 +194,8 @@ app.get("/api/equipment-movements",auth,async(req:any,res)=>{const u=req.user;co
 app.post("/api/equipment-movements/sortie",auth,async(req:any,res)=>{const{equipmentId,equipmentName,siteId,teamId,teamName,qty,date,notes}=req.body;const id=`MV${Date.now()}`;await pool.query("INSERT INTO equipment_movements(id,equipment_id,equipment_name,site_id,team_id,team_name,qty_out,date,movement_type,notes,created_by)VALUES($1,$2,$3,$4,$5,$6,$7,$8,'sortie',$9,$10)",[id,equipmentId,equipmentName,siteId,teamId||null,teamName||null,qty,date,notes||null,(req as any).user?.id||""]);await pool.query("UPDATE equipment_site_stock SET qty_available=GREATEST(0,qty_available-$1),qty_on_terrain=qty_on_terrain+$1,updated_at=NOW() WHERE equipment_id=$2 AND site_id=$3",[qty,equipmentId,siteId]);res.json({ok:true,id});});
 app.put("/api/equipment-movements/:id/retour",auth,async(req:any,res)=>{const{qtyGood,qtyCasse,qtyManquant,responsibleType,responsibleId,responsibleName,notes}=req.body;const mv=await pool.query("SELECT * FROM equipment_movements WHERE id=$1",[req.params.id]);const m=mv.rows[0];if(!m)return res.status(404).json({error:"Mouvement introuvable"});const qtyReturned=(parseFloat(qtyGood)||0)+(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0);await pool.query("UPDATE equipment_movements SET qty_returned=$1,status_return=$2,responsible_type=$3,responsible_id=$4,responsible_name=$5,notes=$6,updated_at=NOW() WHERE id=$7",[qtyReturned,parseFloat(qtyCasse)>0?"casse":parseFloat(qtyManquant)>0?"manquant":"bon_etat",responsibleType||null,responsibleId||null,responsibleName||null,notes||null,req.params.id]);await pool.query("UPDATE equipment_site_stock SET qty_available=qty_available+$1,qty_on_terrain=GREATEST(0,qty_on_terrain-$2),updated_at=NOW() WHERE equipment_id=$3 AND site_id=$4",[parseFloat(qtyGood)||0,qtyReturned,m.equipment_id,m.site_id]);if((parseFloat(qtyCasse)||0)>0||(parseFloat(qtyManquant)||0)>0){const expId=`EX${Date.now()}`;const unitVal=parseFloat(m.unit_value)||0;const qtyBad=(parseFloat(qtyCasse)||0)+(parseFloat(qtyManquant)||0);await pool.query("INSERT INTO expenses(id,team_id,site_id,category,amount,date,comment)VALUES($1,$2,$3,$4,$5,NOW()::date::text,$6)ON CONFLICT DO NOTHING",[expId,m.team_id,m.site_id,"Équipement",unitVal*qtyBad,`${parseFloat(qtyCasse)>0?"Casse":"Perte"} — ${m.equipment_name} x${qtyBad} — responsable: ${responsibleName||responsibleType||"inconnu"}`]);}res.json({ok:true});});
 const staticPath=path.resolve(__dirname,"public");
+app.get("/api/attendance",auth,async(req:any,res)=>{const u=req.user;const r=u.teamId?await pool.query("SELECT * FROM attendance WHERE team_id=$1 ORDER BY date DESC",[u.teamId]):await pool.query("SELECT * FROM attendance ORDER BY date DESC");res.json(r.rows.map(c));});
+app.post("/api/attendance",auth,async(req:any,res)=>{const records=req.body.records;for(const rec of records){await pool.query("INSERT INTO attendance(id,employee_id,employee_name,team_id,site_id,date,status,created_by)VALUES($1,$2,$3,$4,$5,$6,$7,$8)ON CONFLICT(id)DO UPDATE SET status=$7",[rec.id,rec.employeeId,rec.employeeName,rec.teamId,rec.siteId,rec.date,rec.status,req.user?.id||""]);}res.json({ok:true});});
 app.use(express.static(staticPath));
 app.get("*",(_,res)=>res.sendFile(path.join(staticPath,"index.html")));
 const PORT=parseInt(process.env.PORT||"3000",10);
