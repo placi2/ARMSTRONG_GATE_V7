@@ -18,6 +18,8 @@ export default function Attendance() {
   const [date, setDate]     = useState(today());
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState("");
+  const [statuses, setStatuses] = useState<Record<string, string>>({});
+
 
   const myTeamId    = user?.teamId;
   const mySiteId    = user?.siteId;
@@ -31,7 +33,7 @@ export default function Attendance() {
   const existingForDate = attendance.filter((a: any) => a.date === date && a.teamId === myTeamId);
 
   // État local du pointage (initialisé depuis la DB ou "present" par défaut)
-  const [statuses, setStatuses] = useState<Record<string, string>>({});
+  
 
   const getStatus = (empId: string) => {
     if (statuses[empId]) return statuses[empId];
