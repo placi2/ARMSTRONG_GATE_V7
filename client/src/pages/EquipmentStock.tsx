@@ -10,7 +10,10 @@ export default function EquipmentStock() {
   const { user } = useAuth();
 
   const [tab, setTab]           = useState<"central"|"sites"|"transfer"|"historique">("central");
-  const [transferForm, setForm] = useState({ equipmentId:"", siteId:"", qty:"1" });
+  const [transferSiteId, setTransferSiteId] = useState("");
+const [transferItems, setTransferItems]   = useState<{equipmentId:string;qty:string}[]>([
+  { equipmentId:"", qty:"1" }
+]);
   const [saving, setSaving]     = useState(false);
   const [success, setSuccess]   = useState("");
 
@@ -25,28 +28,42 @@ export default function EquipmentStock() {
 
   const selectedEq = equipment.find((e: any) => e.id === transferForm.equipmentId);
 
+  const addTransferItem = () => setTransferItems([...transferItems, { equipmentId:"", qty:"1" }]);
+  const updateTransferItem = (i: number, field: string, val: string) => {
+    const arr = [...transferItems];
+    arr[i] = { ...arr[i], [field]: val };
+    setTransferItems(arr);
+  };
+  const removeTransferItem = (i: number) => setTransferItems(transferItems.filter((_, idx) => idx !== i));
+
   const handleTransfer = async () => {
-    if (!transferForm.equipmentId || !transferForm.siteId || !transferForm.qty) return;
-    const eq  = equipment.find((e: any) => e.id === transferForm.equipmentId);
-    const sit = sites.find((s: any) => s.id === transferForm.siteId);
-    if (!eq || !sit) return;
-    if (parseInt(transferForm.qty) > (eq.stockQty || 0)) {
-      setSuccess("❌ Quantité insuffisante en stock central");
-      return;
-    }
+    const validItems = transferItems.filter(it => it.equipmentId && it.qty);
+    if (!validItems.length || !transferSiteId) return;
+    const sit = sites.find((s: any) => s.id === transferSiteId);
+    if (!sit) return;
     setSaving(true);
     try {
-      await transferToSite({
-        equipmentId:   eq.id,
-        equipmentName: eq.name,
-        siteId:        sit.id,
-        siteName:      sit.name,
-        qty:           parseInt(transferForm.qty),
-        unitValue:     eq.value || 0,
-        category:      eq.category || "remboursable",
-      });
-      setSuccess(`✅ ${transferForm.qty} × ${eq.name} transféré vers ${sit.name}`);
-      setForm({ equipmentId:"", siteId:"", qty:"1" });
+      for (const item of validItems) {
+        const eq = equipment.find((e: any) => e.id === item.equipmentId);
+        if (!eq) continue;
+        if (parseInt(item.qty) > (eq.stockQty || 0)) {
+          setSuccess(`❌ Stock insuffisant pour ${eq.name}`);
+          setSaving(false);
+          return;
+        }
+        await transferToSite({
+          equipmentId:   eq.id,
+          equipmentName: eq.name,
+          siteId:        sit.id,
+          siteName:      sit.name,
+          qty:           parseInt(item.qty),
+          unitValue:     eq.value || 0,
+          category:      eq.category || "remboursable",
+        });
+      }
+      setSuccess(`✅ ${validItems.length} équipement(s) transféré(s) vers ${sit.name}`);
+      setTransferItems([{ equipmentId:"", qty:"1" }]);
+      setTransferSiteId("");
     } finally { setSaving(false); }
   };
 
@@ -218,7 +235,7 @@ export default function EquipmentStock() {
 
       {/* ── Transfert ── */}
       {tab === "transfer" && (
-        <div className="max-w-md">
+        <div className="max-w-xl">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <h2 className="font-semibold mb-4">Transférer du stock vers un site</h2>
             {success && (
@@ -228,43 +245,53 @@ export default function EquipmentStock() {
             )}
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Équipement</label>
-                <select value={transferForm.equipmentId}
-                  onChange={ev => setForm({...transferForm, equipmentId: ev.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="">-- Sélectionner --</option>
-                  {equipmentStock.filter((e: any) => (e.stockQty||0) > 0).map((eq: any) => (
-                    <option key={eq.id} value={eq.id}>{eq.name} (stock: {eq.stockQty||0})</option>
-                  ))}
-                </select>
-              </div>
-              {selectedEq && (
-                <div className="bg-slate-50 rounded p-2 text-xs text-slate-600">
-                  Catégorie : <strong>{selectedEq.category==="epi"?"EPI":"Remboursable"}</strong> —
-                  Prix unit. : <strong>{selectedEq.value||0}$</strong> —
-                  Stock dispo : <strong>{selectedEq.stockQty||0}</strong>
-                </div>
-              )}
-              <div>
                 <label className="text-xs text-slate-500 mb-1 block">Site destinataire</label>
-                <select value={transferForm.siteId}
-                  onChange={ev => setForm({...transferForm, siteId: ev.target.value})}
+                <select value={transferSiteId} onChange={ev => setTransferSiteId(ev.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm">
                   <option value="">-- Sélectionner --</option>
                   {sites.map((si: any) => <option key={si.id} value={si.id}>{si.name}</option>)}
                 </select>
               </div>
+
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Quantité à transférer</label>
-                <input type="number" min="1" max={selectedEq?.stockQty||999}
-                  value={transferForm.qty}
-                  onChange={ev => setForm({...transferForm, qty: ev.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 text-sm" />
+                <label className="text-xs text-slate-500 mb-2 block font-medium">Équipements à transférer</label>
+                {transferItems.map((item, i) => {
+                  const eq = equipment.find((e: any) => e.id === item.equipmentId);
+                  return (
+                    <div key={i} className="flex gap-2 mb-2 items-center">
+                      <select value={item.equipmentId}
+                        onChange={ev => updateTransferItem(i, "equipmentId", ev.target.value)}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm">
+                        <option value="">-- Équipement --</option>
+                        {equipmentStock.filter((e: any) => (e.stockQty||0) > 0).map((eq: any) => (
+                          <option key={eq.id} value={eq.id}>
+                            {eq.name} — {eq.category==="epi"?"EPI":"Remboursable"} (stock: {eq.stockQty||0})
+                          </option>
+                        ))}
+                      </select>
+                      <input type="number" min="1" max={eq?.stockQty||999}
+                        value={item.qty}
+                        onChange={ev => updateTransferItem(i, "qty", ev.target.value)}
+                        className="w-16 border rounded-lg px-2 py-2 text-sm" />
+                      {eq && (
+                        <span className="text-xs text-slate-400 whitespace-nowrap">/{eq.stockQty||0}</span>
+                      )}
+                      {transferItems.length > 1 && (
+                        <button onClick={() => removeTransferItem(i)}
+                          className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                      )}
+                    </div>
+                  );
+                })}
+                <button onClick={addTransferItem}
+                  className="text-xs text-amber-600 hover:underline mt-1">
+                  + Ajouter un équipement
+                </button>
               </div>
             </div>
-            <button onClick={handleTransfer} disabled={saving||!transferForm.equipmentId||!transferForm.siteId}
+            <button onClick={handleTransfer} disabled={saving||!transferItems[0]?.equipmentId||!transferSiteId}
               className="w-full mt-4 bg-amber-600 text-white py-2 rounded-lg text-sm hover:bg-amber-700 disabled:opacity-50">
-              {saving ? "Transfert en cours..." : "🔄 Transférer vers le site"}
+              {saving ? "Transfert en cours..." : `🔄 Transférer ${transferItems.filter(i=>i.equipmentId).length} équipement(s)`}
             </button>
           </div>
         </div>
