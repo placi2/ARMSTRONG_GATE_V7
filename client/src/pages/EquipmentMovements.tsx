@@ -13,9 +13,12 @@ export default function EquipmentMovements() {
   const [tab, setTab] = useState<"sortie"|"retour"|"historique">("sortie");
 
   // Formulaire sortie
-  const [sortieForm, setSortieForm] = useState({
-    equipmentId: "", teamId: "", qty: "1", date: today(), notes: ""
-  });
+  const [sortieTeam, setSortieTeam]   = useState("");
+  const [sortieDate, setSortieDate]   = useState(today());
+  const [sortieNotes, setSortieNotes] = useState("");
+  const [sortieItems, setSortieItems] = useState<{equipmentId:string;qty:string}[]>([
+    { equipmentId:"", qty:"1" }
+  ]);
   const [savingSortie, setSavingSortie] = useState(false);
   const [successSortie, setSuccessSortie] = useState("");
 
@@ -65,29 +68,43 @@ export default function EquipmentMovements() {
     setRetourNotes("");
   };
 
+  const addSortieItem = () => setSortieItems([...sortieItems, { equipmentId:"", qty:"1" }]);
+  const updateSortieItem = (i: number, field: string, val: string) => {
+    const arr = [...sortieItems];
+    arr[i] = { ...arr[i], [field]: val };
+    setSortieItems(arr);
+  };
+  const removeSortieItem = (i: number) => setSortieItems(sortieItems.filter((_, idx) => idx !== i));
+
   const handleSortie = async () => {
-    if (!sortieForm.equipmentId || !sortieForm.qty) return;
-    const eq   = siteEquipment.find((e: any) => e.equipmentId === sortieForm.equipmentId);
-    const team = myTeams.find((t: any) => t.id === sortieForm.teamId);
-    if (!eq) return;
-    if (parseInt(sortieForm.qty) > (eq.qtyAvailable || 0)) {
-      setSuccessSortie("❌ Quantité insuffisante sur ce site");
-      return;
-    }
+    const validItems = sortieItems.filter(it => it.equipmentId && it.qty);
+    if (!validItems.length) return;
+    const team = myTeams.find((t: any) => t.id === sortieTeam);
     setSavingSortie(true);
     try {
-      await createSortie({
-        equipmentId:   eq.equipmentId,
-        equipmentName: eq.equipmentName,
-        siteId:        mySiteId,
-        teamId:        sortieForm.teamId || null,
-        teamName:      team?.name || null,
-        qty:           parseInt(sortieForm.qty),
-        date:          sortieForm.date,
-        notes:         sortieForm.notes || null,
-      });
-      setSuccessSortie(`✅ ${sortieForm.qty} × ${eq.equipmentName} sorti vers ${team?.name || "équipe"}`);
-      setSortieForm({ equipmentId:"", teamId:"", qty:"1", date:today(), notes:"" });
+      for (const item of validItems) {
+        const eq = siteEquipment.find((e: any) => e.equipmentId === item.equipmentId);
+        if (!eq) continue;
+        if (parseInt(item.qty) > (eq.qtyAvailable || 0)) {
+          setSuccessSortie(`❌ Stock insuffisant pour ${eq.equipmentName}`);
+          setSavingSortie(false);
+          return;
+        }
+        await createSortie({
+          equipmentId:   eq.equipmentId,
+          equipmentName: eq.equipmentName,
+          siteId:        mySiteId,
+          teamId:        sortieTeam || null,
+          teamName:      team?.name || null,
+          qty:           parseInt(item.qty),
+          date:          sortieDate,
+          notes:         sortieNotes || null,
+        });
+      }
+      setSuccessSortie(`✅ ${validItems.length} équipement(s) sorti(s) vers ${team?.name || "équipe"}`);
+      setSortieItems([{ equipmentId:"", qty:"1" }]);
+      setSortieTeam("");
+      setSortieNotes("");
     } finally { setSavingSortie(false); }
   };
 
@@ -209,70 +226,81 @@ export default function EquipmentMovements() {
 
       {/* Sortie Matin */}
       {tab === "sortie" && (
-        <div className="max-w-lg">
+        {tab === "sortie" && (
+        <div className="max-w-xl">
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="font-semibold mb-4">📤 Enregistrer une sortie</h2>
+            <h2 className="font-semibold mb-4">📤 Enregistrer une sortie d'équipements</h2>
             {successSortie && (
               <div className={`mb-4 p-3 rounded-lg text-sm ${successSortie.startsWith("✅")?"bg-green-50 text-green-700":"bg-red-50 text-red-700"}`}>
                 {successSortie}
               </div>
             )}
             <div className="space-y-3">
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Équipement disponible</label>
-                <select value={sortieForm.equipmentId}
-                  onChange={e => setSortieForm({...sortieForm, equipmentId: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="">-- Sélectionner --</option>
-                  {siteEquipment.map((eq: any) => (
-                    <option key={eq.equipmentId} value={eq.equipmentId}>
-                      {eq.equipmentName} — {eq.category==="epi"?"EPI":"Remboursable"} (dispo: {eq.qtyAvailable||0})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {selectedEq && (
-                <div className="bg-slate-50 rounded p-2 text-xs text-slate-600">
-                  Disponible : <strong>{selectedEq.qtyAvailable||0}</strong> — Sur terrain : <strong>{selectedEq.qtyOnTerrain||0}</strong>
-                </div>
-              )}
-              <div>
-                <label className="text-xs text-slate-500 mb-1 block">Équipe bénéficiaire</label>
-                <select value={sortieForm.teamId}
-                  onChange={e => setSortieForm({...sortieForm, teamId: e.target.value})}
-                  className="w-full border rounded-lg px-3 py-2 text-sm">
-                  <option value="">-- Sélectionner --</option>
-                  {myTeams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Quantité</label>
-                  <input type="number" min="1" max={selectedEq?.qtyAvailable||999}
-                    value={sortieForm.qty}
-                    onChange={e => setSortieForm({...sortieForm, qty: e.target.value})}
-                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                  <label className="text-xs text-slate-500 mb-1 block">Équipe bénéficiaire</label>
+                  <select value={sortieTeam} onChange={e => setSortieTeam(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">-- Sélectionner --</option>
+                    {myTeams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 mb-1 block">Date</label>
-                  <input type="date" value={sortieForm.date}
-                    onChange={e => setSortieForm({...sortieForm, date: e.target.value})}
+                  <input type="date" value={sortieDate} onChange={e => setSortieDate(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm" />
                 </div>
               </div>
+
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Notes</label>
-                <input value={sortieForm.notes}
-                  onChange={e => setSortieForm({...sortieForm, notes: e.target.value})}
+                <label className="text-xs text-slate-500 mb-2 block font-medium">Équipements à sortir</label>
+                {sortieItems.map((item, i) => {
+                  const eq = siteEquipment.find((e: any) => e.equipmentId === item.equipmentId);
+                  return (
+                    <div key={i} className="flex gap-2 mb-2 items-center">
+                      <select value={item.equipmentId}
+                        onChange={e => updateSortieItem(i, "equipmentId", e.target.value)}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm">
+                        <option value="">-- Équipement --</option>
+                        {siteEquipment.map((eq: any) => (
+                          <option key={eq.equipmentId} value={eq.equipmentId}>
+                            {eq.equipmentName} (dispo: {eq.qtyAvailable||0})
+                          </option>
+                        ))}
+                      </select>
+                      <input type="number" min="1" max={eq?.qtyAvailable||999}
+                        value={item.qty}
+                        onChange={e => updateSortieItem(i, "qty", e.target.value)}
+                        className="w-16 border rounded-lg px-2 py-2 text-sm" />
+                      {eq && (
+                        <span className="text-xs text-slate-400 whitespace-nowrap">/{eq.qtyAvailable||0}</span>
+                      )}
+                      {sortieItems.length > 1 && (
+                        <button onClick={() => removeSortieItem(i)}
+                          className="text-red-400 hover:text-red-600 text-lg leading-none">×</button>
+                      )}
+                    </div>
+                  );
+                })}
+                <button onClick={addSortieItem}
+                  className="text-xs text-amber-600 hover:underline mt-1">
+                  + Ajouter un équipement
+                </button>
+              </div>
+
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Notes (optionnel)</label>
+                <input value={sortieNotes} onChange={e => setSortieNotes(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Observations..." />
               </div>
             </div>
-            <button onClick={handleSortie} disabled={savingSortie||!sortieForm.equipmentId}
+            <button onClick={handleSortie} disabled={savingSortie||!sortieItems[0]?.equipmentId}
               className="w-full mt-4 bg-amber-600 text-white py-2 rounded-lg text-sm hover:bg-amber-700 disabled:opacity-50">
-              {savingSortie ? "Enregistrement..." : "📤 Enregistrer la sortie"}
+              {savingSortie ? "Enregistrement..." : `📤 Enregistrer ${sortieItems.filter(i=>i.equipmentId).length} équipement(s)`}
             </button>
           </div>
         </div>
+      
       )}
 
       {/* Retour Soir */}
