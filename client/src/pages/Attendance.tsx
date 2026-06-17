@@ -3,6 +3,7 @@ import { useData } from "@/contexts/DataContext";
 import { useAuth } from "@/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import Pagination, { usePagination } from "@/components/Pagination";
+import * as XLSX from "xlsx";
 
 const today    = () => new Date().toISOString().split("T")[0];
 const firstDay = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
@@ -157,6 +158,86 @@ export default function Attendance() {
     URL.revokeObjectURL(url);
   };
 
+  const exportExcel = () => {
+    const data = payReport.map(({ emp, site, team, joursPresent, joursAbsent, joursConge, workingDays: wd, salaireMensuel, salaireGagne, totalAvances, salaireNet }: any) => ({
+      "Employé":          emp.name,
+      "Site":             site?.name || "—",
+      "Équipe":           team?.name || "—",
+      "Jours ouvrables":  wd,
+      "Jours présents":   joursPresent,
+      "Jours absents":    joursAbsent,
+      "Jours congés":     joursConge,
+      "Salaire base ($)": salaireMensuel,
+      "Salaire gagné ($)":parseFloat(salaireGagne.toFixed(2)),
+      "Avances ($)":      totalAvances,
+      "Net à payer ($)":  parseFloat(salaireNet.toFixed(2)),
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Rapport de Paie");
+    XLSX.writeFile(wb, `rapport-paie-${dateFrom}-${dateTo}.xlsx`);
+  };
+
+  const exportPDF = () => {
+    const printContent = `
+      <html>
+      <head>
+        <title>Rapport de Paie — ${dateFrom} au ${dateTo}</title>
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 12px; }
+          h1 { font-size: 16px; margin-bottom: 4px; }
+          p { color: #666; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #f1f5f9; padding: 8px; text-align: left; border: 1px solid #e2e8f0; font-size: 11px; }
+          td { padding: 7px 8px; border: 1px solid #e2e8f0; }
+          tr:nth-child(even) { background: #f8fafc; }
+          .total { font-weight: bold; background: #fef3c7; }
+        </style>
+      </head>
+      <body>
+        <h1>Rapport de Paie</h1>
+        <p>Période : ${new Date(dateFrom).toLocaleDateString("fr-FR")} au ${new Date(dateTo).toLocaleDateString("fr-FR")} — Jours ouvrables : ${workingDays}j</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Employé</th><th>Site / Équipe</th><th>Jrs ouvr.</th>
+              <th>Présent</th><th>Salaire base</th><th>Salaire gagné</th>
+              <th>Avances</th><th>Net à payer</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payReport.map(({ emp, site, team, joursPresent, workingDays: wd, salaireMensuel, salaireGagne, totalAvances, salaireNet }: any) => `
+              <tr>
+                <td>${emp.name}</td>
+                <td>${site?.name||"—"} / ${team?.name||"—"}</td>
+                <td>${wd}j</td>
+                <td>${joursPresent}j</td>
+                <td>$${salaireMensuel}</td>
+                <td>$${salaireGagne.toFixed(2)}</td>
+                <td>-$${totalAvances}</td>
+                <td><strong>$${salaireNet.toFixed(2)}</strong></td>
+              </tr>
+            `).join("")}
+            <tr class="total">
+              <td colspan="4"><strong>TOTAL</strong></td>
+              <td><strong>$${payReport.reduce((s: number,r: any)=>s+r.salaireMensuel,0)}</strong></td>
+              <td><strong>$${payReport.reduce((s: number,r: any)=>s+r.salaireGagne,0).toFixed(2)}</strong></td>
+              <td><strong>-$${payReport.reduce((s: number,r: any)=>s+r.totalAvances,0)}</strong></td>
+              <td><strong>$${payReport.reduce((s: number,r: any)=>s+r.salaireNet,0).toFixed(2)}</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </body>
+      </html>
+    `;
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(printContent);
+      win.document.close();
+      win.print();
+    }
+  };
+
   if (isRH) {
     return (
       
@@ -275,10 +356,20 @@ export default function Attendance() {
                 Période : <strong>{new Date(dateFrom).toLocaleDateString("fr-FR")}</strong> au <strong>{new Date(dateTo).toLocaleDateString("fr-FR")}</strong> —
                 Jours ouvrables : <strong>{workingDays}j</strong>
               </div>
-              <button onClick={exportCSV}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-green-700">
-                📊 Exporter CSV
-              </button>
+              <div className="flex gap-2">
+                <button onClick={exportCSV}
+                  className="bg-slate-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-slate-700">
+                  📄 CSV
+                </button>
+                <button onClick={exportExcel}
+                  className="bg-green-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-green-700">
+                  📊 Excel
+                </button>
+                <button onClick={exportPDF}
+                  className="bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700">
+                  🖨️ PDF
+                </button>
+              </div>
             </div>
 
             {/* Stats paie */}
