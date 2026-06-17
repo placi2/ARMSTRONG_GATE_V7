@@ -12,17 +12,15 @@ export default function EquipmentMovements() {
 
   const [tab, setTab] = useState<"sortie"|"retour"|"historique">("sortie");
 
-  // Formulaire sortie
+  // Sortie
   const [sortieTeam, setSortieTeam]   = useState("");
   const [sortieDate, setSortieDate]   = useState(today());
   const [sortieNotes, setSortieNotes] = useState("");
-  const [sortieItems, setSortieItems] = useState<{equipmentId:string;qty:string}[]>([
-    { equipmentId:"", qty:"1" }
-  ]);
+  const [sortieItems, setSortieItems] = useState<{equipmentId:string;qty:string}[]>([{ equipmentId:"", qty:"1" }]);
   const [savingSortie, setSavingSortie] = useState(false);
   const [successSortie, setSuccessSortie] = useState("");
 
-  // Modal retour — selectedMv déclaré ici
+  // Retour
   const [selectedMv, setSelectedMv]     = useState<any>(null);
   const [qtyGood, setQtyGood]           = useState("0");
   const [qtyCasse, setQtyCasse]         = useState("0");
@@ -32,15 +30,15 @@ export default function EquipmentMovements() {
   const [retourNotes, setRetourNotes]   = useState("");
   const [savingRetour, setSavingRetour] = useState(false);
 
-  // Filtre historique
+  // Historique
   const [searchHist, setSearchHist] = useState("");
 
-  const mySiteId      = user?.siteId;
-  const myTeams       = teams.filter((t: any) => t.siteId === mySiteId);
-  const siteEquipment = siteStock.filter((ss: any) => ss.siteId === mySiteId && (ss.qtyAvailable || 0) > 0);
-  const myMovements   = equipmentMovements.filter((mv: any) => mv.siteId === mySiteId);
+  const mySiteId       = user?.siteId;
+  const myTeams        = teams.filter((t: any) => t.siteId === mySiteId);
+  const siteEquipment  = siteStock.filter((ss: any) => ss.siteId === mySiteId && (ss.qtyAvailable || 0) > 0);
+  const myMovements    = equipmentMovements.filter((mv: any) => mv.siteId === mySiteId);
   const pendingRetours = myMovements.filter((mv: any) => !mv.statusReturn && mv.movementType === "sortie");
-  const siteEmployees = employees.filter((e: any) => myTeams.some((t: any) => t.id === e.teamId));
+  const siteEmployees  = employees.filter((e: any) => myTeams.some((t: any) => t.id === e.teamId));
 
   const histFiltered = myMovements.filter((mv: any) =>
     !searchHist ||
@@ -49,14 +47,20 @@ export default function EquipmentMovements() {
   );
   const histPag = usePagination(histFiltered);
 
-  const selectedEq = siteEquipment.find((e: any) => e.equipmentId === sortieForm.equipmentId);
-
-  const good     = parseFloat(qtyGood)     || 0;
-  const casse    = parseFloat(qtyCasse)    || 0;
-  const manquant = parseFloat(qtyManquant) || 0;
+  // Calculs retour
+  const good      = parseFloat(qtyGood)     || 0;
+  const casse     = parseFloat(qtyCasse)    || 0;
+  const manquant  = parseFloat(qtyManquant) || 0;
   const totalRetour = good + casse + manquant;
-  const qtyOut  = parseFloat(selectedMv?.qtyOut) || 0;
-  const retourOk = selectedMv ? totalRetour === qtyOut : false;
+  const qtyOut    = parseFloat(selectedMv?.qtyOut) || 0;
+  const retourOk  = selectedMv ? totalRetour === qtyOut : false;
+
+  // Helpers sortie
+  const addSortieItem    = () => setSortieItems([...sortieItems, { equipmentId:"", qty:"1" }]);
+  const updateSortieItem = (i: number, field: string, val: string) => {
+    const arr = [...sortieItems]; arr[i] = { ...arr[i], [field]: val }; setSortieItems(arr);
+  };
+  const removeSortieItem = (i: number) => setSortieItems(sortieItems.filter((_, idx) => idx !== i));
 
   const openRetour = (mv: any) => {
     setSelectedMv(mv);
@@ -67,14 +71,6 @@ export default function EquipmentMovements() {
     setRespId("");
     setRetourNotes("");
   };
-
-  const addSortieItem = () => setSortieItems([...sortieItems, { equipmentId:"", qty:"1" }]);
-  const updateSortieItem = (i: number, field: string, val: string) => {
-    const arr = [...sortieItems];
-    arr[i] = { ...arr[i], [field]: val };
-    setSortieItems(arr);
-  };
-  const removeSortieItem = (i: number) => setSortieItems(sortieItems.filter((_, idx) => idx !== i));
 
   const handleSortie = async () => {
     const validItems = sortieItems.filter(it => it.equipmentId && it.qty);
@@ -145,7 +141,7 @@ export default function EquipmentMovements() {
         </div>
       </div>
 
-      {/* Modal retour — toujours dans le DOM mais caché */}
+      {/* Modal retour */}
       {selectedMv && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
@@ -180,7 +176,6 @@ export default function EquipmentMovements() {
                   Total : {totalRetour} / {qtyOut} {retourOk?"✅":"⚠️ doit égaler la quantité sortie"}
                 </p>
               </div>
-
               {(casse > 0 || manquant > 0) && (
                 <>
                   <div>
@@ -224,7 +219,117 @@ export default function EquipmentMovements() {
         </div>
       )}
 
-      
+      {/* Sortie Matin */}
+      {tab === "sortie" && (
+        <div className="max-w-xl">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h2 className="font-semibold mb-4">📤 Enregistrer une sortie d'équipements</h2>
+            {successSortie && (
+              <div className={`mb-4 p-3 rounded-lg text-sm ${successSortie.startsWith("✅")?"bg-green-50 text-green-700":"bg-red-50 text-red-700"}`}>
+                {successSortie}
+              </div>
+            )}
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Équipe bénéficiaire</label>
+                  <select value={sortieTeam} onChange={e => setSortieTeam(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm">
+                    <option value="">-- Sélectionner --</option>
+                    {myTeams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Date</label>
+                  <input type="date" value={sortieDate} onChange={e => setSortieDate(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-2 block font-medium">Équipements à sortir</label>
+                {sortieItems.map((item, i) => {
+                  const eq = siteEquipment.find((e: any) => e.equipmentId === item.equipmentId);
+                  return (
+                    <div key={i} className="flex gap-2 mb-2 items-center">
+                      <select value={item.equipmentId}
+                        onChange={e => updateSortieItem(i, "equipmentId", e.target.value)}
+                        className="flex-1 border rounded-lg px-3 py-2 text-sm">
+                        <option value="">-- Équipement --</option>
+                        {siteEquipment.map((se: any) => (
+                          <option key={se.equipmentId} value={se.equipmentId}>
+                            {se.equipmentName} (dispo: {se.qtyAvailable||0})
+                          </option>
+                        ))}
+                      </select>
+                      <input type="number" min="1" max={eq?.qtyAvailable||999}
+                        value={item.qty}
+                        onChange={e => updateSortieItem(i, "qty", e.target.value)}
+                        className="w-16 border rounded-lg px-2 py-2 text-sm" />
+                      {eq && <span className="text-xs text-slate-400">/{eq.qtyAvailable||0}</span>}
+                      {sortieItems.length > 1 && (
+                        <button onClick={() => removeSortieItem(i)}
+                          className="text-red-400 hover:text-red-600 text-lg">×</button>
+                      )}
+                    </div>
+                  );
+                })}
+                <button onClick={addSortieItem}
+                  className="text-xs text-amber-600 hover:underline mt-1">
+                  + Ajouter un équipement
+                </button>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Notes</label>
+                <input value={sortieNotes} onChange={e => setSortieNotes(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Observations..." />
+              </div>
+            </div>
+            <button onClick={handleSortie} disabled={savingSortie||!sortieItems[0]?.equipmentId}
+              className="w-full mt-4 bg-amber-600 text-white py-2 rounded-lg text-sm hover:bg-amber-700 disabled:opacity-50">
+              {savingSortie ? "Enregistrement..." : `📤 Enregistrer ${sortieItems.filter(i=>i.equipmentId).length} équipement(s)`}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Retour Soir */}
+      {tab === "retour" && (
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+          <div className="px-4 py-3 bg-orange-50 border-b">
+            <h2 className="font-semibold text-orange-800 text-sm">📥 Retours en attente ({pendingRetours.length})</h2>
+          </div>
+          <table className="w-full text-sm">
+            <thead className="bg-slate-50 text-slate-500 text-left">
+              <tr>
+                <th className="px-4 py-2">Date</th>
+                <th className="px-4 py-2">Équipement</th>
+                <th className="px-4 py-2">Équipe</th>
+                <th className="px-4 py-2">Qté sortie</th>
+                <th className="px-4 py-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingRetours.map((mv: any) => (
+                <tr key={mv.id} className="border-t hover:bg-slate-50">
+                  <td className="px-4 py-2 text-xs text-slate-500">{mv.date}</td>
+                  <td className="px-4 py-2 font-medium">{mv.equipmentName}</td>
+                  <td className="px-4 py-2">{mv.teamName || "—"}</td>
+                  <td className="px-4 py-2 font-bold text-orange-600">{mv.qtyOut}</td>
+                  <td className="px-4 py-2">
+                    <button onClick={() => openRetour(mv)}
+                      className="text-green-600 hover:underline text-xs">
+                      📥 Enregistrer retour
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {pendingRetours.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Aucun retour en attente</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* Historique */}
       {tab === "historique" && (
