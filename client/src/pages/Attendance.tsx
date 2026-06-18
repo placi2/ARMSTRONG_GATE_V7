@@ -451,7 +451,7 @@ const exportPDF = () => {
                       <td className="px-4 py-2 font-bold text-green-700">${salaireNet.toFixed(2)}</td>
                     </tr>
                   ))}
-                  ))}
+                  
                   {payReport.length === 0 && (
                     <tr><td colSpan={8} className="px-4 py-6 text-center text-slate-400">Aucun employé trouvé</td></tr>
                   )}
