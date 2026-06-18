@@ -30,7 +30,7 @@ export default function EmployeeProfile() {
   const sites = data?.sites || [];
   const productions = data?.productions || [];
   const expenses = data?.expenses || [];
-  const advances = (data as any)?.advances || [];
+  const advances = (data as any)?.advances || [];const salaryDeductions = (data as any)?.salaryDeductions || [];
 
   const { fmt } = useFormatMoney();
 
@@ -51,7 +51,7 @@ export default function EmployeeProfile() {
 
   const team = teams.find(t => t.id === employee.teamId);
   const site = sites.find(s => s.id === team?.siteId);
-  const empAdvances = advances.filter((a: any) => a.employeeId === empId);
+  const empAdvances = advances.filter((a: any) => a.employeeId === empId);const empDeductions = salaryDeductions.filter((d: any) => d.employeeId === empId);const totalDeductions = empDeductions.filter((d:any)=>d.status==="en_cours").reduce((s:number,d:any)=>s+(parseFloat(d.amountTotal)-parseFloat(d.amountPaid)),0);const isBlocked = empDeductions.some((d:any)=>d.status==="en_cours"&&parseFloat(d.amountTotal)>500);
   const totalAdvances = empAdvances.reduce((s: number, a: any) => s + a.amount, 0);
   const baseSalary = employee.monthlySalary || (employee as any).salary || 0;
   const netSalary = baseSalary - totalAdvances;
@@ -109,7 +109,7 @@ export default function EmployeeProfile() {
             { l: "Salaire Base", v: fmt(baseSalary), c: "text-blue-600", bg: "bg-blue-50" },
             { l: "Total Avances", v: fmt(totalAdvances), c: "text-orange-600", bg: "bg-orange-50" },
             { l: "Salaire Net", v: fmt(netSalary), c: "text-green-600", bg: "bg-green-50" },
-            { l: "Salaire GagnÃ© (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },
+            { l: "Salaire Gagné (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Déductions équip.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
           ].map(s => (
             <Card key={s.l} className={`${s.bg} border-0`}>
               <CardContent className="pt-4">
@@ -120,6 +120,47 @@ export default function EmployeeProfile() {
           ))}
         </div>
 
+        {/* Deductions */}
+        {empDeductions.length > 0 && (
+          <Card className="bg-white">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="text-base">?? Déductions Équipements ({empDeductions.length})</CardTitle>
+                {isBlocked && <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">?? Avance bloquée</span>}
+              </div>
+            </CardHeader>
+            <CardContent>
+              <table className="w-full text-sm">
+                <thead className="text-slate-500 text-left border-b">
+                  <tr>
+                    <th className="pb-2">Équipement</th>
+                    <th className="pb-2">Dette totale</th>
+                    <th className="pb-2">Payé</th>
+                    <th className="pb-2">Reste</th>
+                    <th className="pb-2">Taux/mois</th>
+                    <th className="pb-2">Statut</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {empDeductions.map((d: any) => (
+                    <tr key={d.id} className="border-t">
+                      <td className="py-2">{d.equipmentName}</td>
+                      <td className="py-2 text-red-600">${d.amountTotal}</td>
+                      <td className="py-2 text-green-600">${d.amountPaid}</td>
+                      <td className="py-2 font-bold">${(parseFloat(d.amountTotal)-parseFloat(d.amountPaid)).toFixed(2)}</td>
+                      <td className="py-2">{d.monthlyRate}%</td>
+                      <td className="py-2">
+                        <span className={"px-2 py-0.5 rounded-full text-xs " + (d.status==="soldee"?"bg-green-100 text-green-700":"bg-red-100 text-red-700")}>
+                          {d.status==="soldee"?"Soldée":"En cours"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        )}
         {/* Attendance */}
         <Card className="bg-white">
           <CardHeader>
