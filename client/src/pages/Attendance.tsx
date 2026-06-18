@@ -90,7 +90,7 @@ export default function Attendance() {
     return inTeam && inSearch;
   });
 
-  const rhPag = usePagination(rhReport);
+  
 
   // Calcul jours ouvrables entre deux dates (lun-sam)
   const getWorkingDays = (from: string, to: string) => {
@@ -126,7 +126,8 @@ export default function Attendance() {
     return { emp, team, site, joursPresent, joursAbsent, joursConge, totalJours, salaireMensuel, salaireGagne };
   });
 
-  
+  const rhPag = usePagination(rhReport);
+
   const payReport = rhEmployees.map((emp: any) => {
     const empAtt = attendance.filter((a: any) =>
       a.employeeId === emp.id && a.date >= dateFrom && a.date <= dateTo
