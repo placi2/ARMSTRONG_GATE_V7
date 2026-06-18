@@ -26,7 +26,7 @@ export default function Attendance() {
   const [statuses, setStatuses] = useState<Record<string, string>>({});
 
   // Filtres RH
-  const [dateFrom, setDateFrom]     = useState(firstDay());
+  const [dateFrom, setDateFrom] = useState(() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-01`; });
   const [dateTo, setDateTo]         = useState(today());
   const [filterSite, setFilterSite] = useState("all");
   const [filterTeam, setFilterTeam] = useState("all");
@@ -100,8 +100,8 @@ export default function Attendance() {
     const joursConge    = empAttendance.filter((a: any) => a.status === "conge").length;
     const totalJours    = joursPresent + joursAbsent + joursConge;
     const salaireMensuel = emp.monthlySalary || 0;
-    const salaireGagne  = totalJours > 0
-      ? (joursPresent / totalJours) * salaireMensuel
+    const salaireGagne  = workingDays > 0
+      ? Math.min((joursPresent / workingDays) * salaireMensuel, salaireMensuel)
       : 0;
     const team = teams.find((t: any) => t.id === emp.teamId);
     const site = sites.find((s: any) => s.id === team?.siteId);
@@ -223,7 +223,7 @@ const exportPDF = () => {
           </div>
         </div>
         <p class="report-title">Rapport de Paie</p>
-        <p class="period">Période : ${new Date(dateFrom).toLocaleDateString("fr-FR")} au ${new Date(dateTo).toLocaleDateString("fr-FR")} — Jours ouvrables : ${workingDays}j</p>
+        <p class="period">Période : ${dateFrom.split("-").reverse().join("/")} au ${dateTo.split("-").reverse().join("/")} — Jours ouvrables : ${workingDays}j</p>
         <table>
           <thead>
             <tr>
@@ -386,7 +386,7 @@ const exportPDF = () => {
           <>
             <div className="flex justify-between items-center mb-3">
               <div className="text-sm text-slate-500">
-                Période : <strong>{new Date(dateFrom).toLocaleDateString("fr-FR")}</strong> au <strong>{new Date(dateTo).toLocaleDateString("fr-FR")}</strong> —
+                Période : <strong>{dateFrom.split("-").reverse().join("/")}</strong> au <strong>{dateTo.split("-").reverse().join("/")}</strong> —
                 Jours ouvrables : <strong>{workingDays}j</strong>
               </div>
               <div className="flex gap-2">
