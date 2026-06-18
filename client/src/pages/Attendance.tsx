@@ -133,9 +133,8 @@ export default function Attendance() {
     const joursAbsent   = empAtt.filter((a: any) => a.status === "absent").length;
     const joursConge    = empAtt.filter((a: any) => a.status === "conge").length;
     const salaireMensuel = emp.monthlySalary || 0;
-    const salaireGagne  = workingDays > 0
-      ? (joursPresent / workingDays) * salaireMensuel
-      : 0;
+    const salaireJournalier = salaireMensuel / 26;
+    const salaireGagne = Math.min(joursPresent * salaireJournalier, salaireMensuel);
     const totalAvances  = emp.totalAdvances || 0;
     // Déduction équipement ce mois
     const empDeds = salaryDeductions.filter((d: any) => d.employeeId === emp.id && d.status === "en_cours");
