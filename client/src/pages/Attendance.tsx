@@ -105,7 +105,22 @@ export default function Attendance() {
     return count;
   };
 
-  const workingDays = getWorkingDays(dateFrom, dateTo);
+  // Jours ouvrables du mois complet (pas juste la période sélectionnée)
+  const getMonthWorkingDays = (dateStr: string) => {
+    const d = new Date(dateStr + "T12:00:00");
+    const year = d.getFullYear();
+    const month = d.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const lastOfMonth = new Date(year, month + 1, 0);
+    let count = 0;
+    const cur = new Date(firstOfMonth);
+    while (cur <= lastOfMonth) {
+      if (cur.getDay() !== 0) count++;
+      cur.setDate(cur.getDate() + 1);
+    }
+    return count;
+  };
+  const workingDays = getMonthWorkingDays(dateFrom);
 
 
   // Calcul rapport par employé
