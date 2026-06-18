@@ -387,7 +387,7 @@ const exportPDF = () => {
             <div className="flex justify-between items-center mb-3">
               <div className="text-sm text-slate-500">
                 Période : <strong>{new Date(dateFrom).toLocaleDateString("fr-FR")}</strong> au <strong>{new Date(dateTo).toLocaleDateString("fr-FR")}</strong> —
-                Jours ouvrables : <strong>{workingDays}j</strong>
+                Jours ouvrables : <strong>26j (fixe)</strong>
               </div>
               <div className="flex gap-2">
                 <button onClick={exportCSV}
