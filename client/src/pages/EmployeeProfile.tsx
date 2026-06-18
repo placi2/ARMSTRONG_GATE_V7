@@ -111,7 +111,7 @@ export default function EmployeeProfile() {
             { l: "Salaire Base", v: fmt(baseSalary), c: "text-blue-600", bg: "bg-blue-50" },
             { l: "Total Avances", v: fmt(totalAdvances), c: "text-orange-600", bg: "bg-orange-50" },
             { l: "Salaire Net", v: fmt(netSalary), c: "text-green-600", bg: "bg-green-50" },
-            { l: "Salaire Gagn� (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Déductions Équipe.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
+            { l: "Salaire Gagné (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Déductions Équipe.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
           ].map(s => (
             <Card key={s.l} className={`${s.bg} border-0`}>
               <CardContent className="pt-4">
