@@ -147,7 +147,7 @@ export default function Attendance() {
     const salaireNet    = Math.max(0, salaireGagne - totalAvances - deductionMensuelle);
     const team = teams.find((t: any) => t.id === emp.teamId);
     const site = sites.find((s: any) => s.id === team?.siteId);
-    return { emp, team, site, joursPresent, joursAbsent, joursConge, workingDays, salaireMensuel, salaireGagne, totalAvances, salaireNet };
+    return { emp, team, site, joursPresent, joursAbsent, joursConge, workingDays, salaireMensuel, salaireGagne, totalAvances, deductionMensuelle, salaireNet };
   });
 
   const payPag = usePagination(payReport);
@@ -438,7 +438,7 @@ const exportPDF = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {(payPag.paginated as any[]).map(({ emp, team, site, joursPresent, workingDays: wd, salaireMensuel, salaireGagne, totalAvances, salaireNet }: any) => (
+                  {(payPag.paginated as any[]).map(({ emp, team, site, joursPresent, workingDays: wd, salaireMensuel, salaireGagne, totalAvances, deductionMensuelle, salaireNet }: any) => (
                     <tr key={emp.id} className="border-t hover:bg-slate-50">
                       <td className="px-4 py-2 font-medium">{emp.name}</td>
                       <td className="px-4 py-2 text-xs text-slate-500">{site?.name || "—"} / {team?.name || "—"}</td>
