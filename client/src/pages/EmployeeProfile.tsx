@@ -38,16 +38,16 @@ export default function EmployeeProfile() {
 
   
 
-  const team = teams.find(t => t.id === employee.teamId);
+  const team = teams.find(t => t.id === employee?.teamId);
   const site = sites.find(s => s.id === team?.siteId);
   const empAdvances = advances.filter((a: any) => a.employeeId === empId);const empDeductions = salaryDeductions.filter((d: any) => d.employeeId === empId);const totalDeductions = empDeductions.filter((d:any)=>d.status==="en_cours").reduce((s:number,d:any)=>s+(parseFloat(d.amountTotal)-parseFloat(d.amountPaid)),0);const isBlocked = empDeductions.some((d:any)=>d.status==="en_cours"&&parseFloat(d.amountTotal)>500);
   const totalAdvances = empAdvances.reduce((s: number, a: any) => s + a.amount, 0);
-  const baseSalary = employee.monthlySalary || (employee as any).salary || 0;
+  const baseSalary = employee?.monthlySalary || (employee as any)?.salary || 0;
   const netSalary = baseSalary - totalAdvances;
 
-  const teamProds = [...productions.filter(p => p.teamId === employee.teamId)]
+  const teamProds = [...productions.filter(p => p.teamId === employee?.teamId)]
     .sort((a, b) => b.date.localeCompare(a.date));
-  const teamExps = [...expenses.filter(e => e.teamId === employee.teamId)]
+  const teamExps = [...expenses.filter(e => e.teamId === employee?.teamId)]
     .sort((a, b) => b.date.localeCompare(a.date));
   const advList = [...empAdvances].sort((a: any, b: any) => b.date.localeCompare(a.date));
 
