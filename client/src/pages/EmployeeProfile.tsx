@@ -36,18 +36,7 @@ export default function EmployeeProfile() {
 
   const employee = employees.find(e => e.id === empId);
 
-  if (!employee) return (
-    <DashboardLayout>
-      <div className="text-center py-20">
-        <User size={48} className="mx-auto mb-4 text-slate-300" />
-        <h2 className="text-xl font-bold text-slate-700 mb-2">EmployÃ© non trouvÃ©</h2>
-        <p className="text-sm text-slate-400 mb-4">ID: "{empId}"</p>
-        <Link href="/employees">
-          <Button className="bg-amber-500 hover:bg-amber-600 text-white"><ArrowLeft size={15} className="mr-1" />Retour</Button>
-        </Link>
-      </div>
-    </DashboardLayout>
-  );
+  
 
   const team = teams.find(t => t.id === employee.teamId);
   const site = sites.find(s => s.id === team?.siteId);
@@ -87,6 +76,19 @@ export default function EmployeeProfile() {
   const dailySalary = baseSalary / 30;
   const earnedSalary = Math.round(presentDays * dailySalary + halfDays * dailySalary * 0.5);
 
+  if (!employee) return (
+    <DashboardLayout>
+      <div className="text-center py-20">
+        <User size={48} className="mx-auto mb-4 text-slate-300" />
+        <h2 className="text-xl font-bold text-slate-700 mb-2">EmployÃ© non trouvÃ©</h2>
+        <p className="text-sm text-slate-400 mb-4">ID: "{empId}"</p>
+        <Link href="/employees">
+          <Button className="bg-amber-500 hover:bg-amber-600 text-white"><ArrowLeft size={15} className="mr-1" />Retour</Button>
+        </Link>
+      </div>
+    </DashboardLayout>
+  );
+
   return (
     <DashboardLayout>
       <div className="space-y-5">
@@ -109,7 +111,7 @@ export default function EmployeeProfile() {
             { l: "Salaire Base", v: fmt(baseSalary), c: "text-blue-600", bg: "bg-blue-50" },
             { l: "Total Avances", v: fmt(totalAdvances), c: "text-orange-600", bg: "bg-orange-50" },
             { l: "Salaire Net", v: fmt(netSalary), c: "text-green-600", bg: "bg-green-50" },
-            { l: "Salaire Gagné (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Déductions équip.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
+            { l: "Salaire Gagnï¿½ (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Dï¿½ductions ï¿½quip.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
           ].map(s => (
             <Card key={s.l} className={`${s.bg} border-0`}>
               <CardContent className="pt-4">
@@ -125,17 +127,17 @@ export default function EmployeeProfile() {
           <Card className="bg-white">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-base">?? Déductions Équipements ({empDeductions.length})</CardTitle>
-                {isBlocked && <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">?? Avance bloquée</span>}
+                <CardTitle className="text-base">?? Dï¿½ductions ï¿½quipements ({empDeductions.length})</CardTitle>
+                {isBlocked && <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">?? Avance bloquï¿½e</span>}
               </div>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">
                 <thead className="text-slate-500 text-left border-b">
                   <tr>
-                    <th className="pb-2">Équipement</th>
+                    <th className="pb-2">ï¿½quipement</th>
                     <th className="pb-2">Dette totale</th>
-                    <th className="pb-2">Payé</th>
+                    <th className="pb-2">Payï¿½</th>
                     <th className="pb-2">Reste</th>
                     <th className="pb-2">Taux/mois</th>
                     <th className="pb-2">Statut</th>
@@ -151,7 +153,7 @@ export default function EmployeeProfile() {
                       <td className="py-2">{d.monthlyRate}%</td>
                       <td className="py-2">
                         <span className={"px-2 py-0.5 rounded-full text-xs " + (d.status==="soldee"?"bg-green-100 text-green-700":"bg-red-100 text-red-700")}>
-                          {d.status==="soldee"?"Soldée":"En cours"}
+                          {d.status==="soldee"?"Soldï¿½e":"En cours"}
                         </span>
                       </td>
                     </tr>
