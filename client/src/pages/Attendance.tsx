@@ -16,7 +16,7 @@ const STATUS_OPTIONS = [
 ];
 
 export default function Attendance() {
-  const { employees, teams, sites, attendance, advances, saveAttendance } = useData() as any;
+  const { employees, teams, sites, attendance, advances, salaryDeductions, saveAttendance } = useData() as any;
   const { user } = useAuth();
   const { settings } = useSettings();
 
@@ -137,7 +137,14 @@ export default function Attendance() {
       ? (joursPresent / workingDays) * salaireMensuel
       : 0;
     const totalAvances  = emp.totalAdvances || 0;
-    const salaireNet    = Math.max(0, salaireGagne - totalAvances);
+    // Déduction équipement ce mois
+    const empDeds = salaryDeductions.filter((d: any) => d.employeeId === emp.id && d.status === "en_cours");
+    const deductionMensuelle = empDeds.reduce((s: number, d: any) => {
+      const reste = parseFloat(d.amountTotal) - parseFloat(d.amountPaid);
+      const mensuel = (parseFloat(d.monthlyRate) / 100) * salaireMensuel;
+      return s + Math.min(reste, mensuel);
+    }, 0);
+    const salaireNet    = Math.max(0, salaireGagne - totalAvances - deductionMensuelle);
     const team = teams.find((t: any) => t.id === emp.teamId);
     const site = sites.find((s: any) => s.id === team?.siteId);
     return { emp, team, site, joursPresent, joursAbsent, joursConge, workingDays, salaireMensuel, salaireGagne, totalAvances, salaireNet };
@@ -426,6 +433,7 @@ const exportPDF = () => {
                     <th className="px-4 py-2">Salaire base</th>
                     <th className="px-4 py-2 text-amber-600">Salaire gagné</th>
                     <th className="px-4 py-2 text-red-600">Avances</th>
+                    <th className="px-4 py-2 text-red-600">Déduction équip.</th>
                     <th className="px-4 py-2 text-green-700">Net à payer</th>
                   </tr>
                 </thead>
@@ -440,6 +448,7 @@ const exportPDF = () => {
                       <td className="px-4 py-2 font-bold text-amber-600">${salaireGagne.toFixed(2)}</td>
                       <td className="px-4 py-2 text-red-500">-${totalAvances}</td>
                       <td className="px-4 py-2 font-bold text-green-700">${salaireNet.toFixed(2)}</td>
+                      <td className="px-4 py-2 text-red-500">-${deductionMensuelle.toFixed(2)}</td>
                     </tr>
                   ))}
                   {payReport.length === 0 && (

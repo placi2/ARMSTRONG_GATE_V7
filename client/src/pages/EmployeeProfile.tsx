@@ -111,7 +111,7 @@ export default function EmployeeProfile() {
             { l: "Salaire Base", v: fmt(baseSalary), c: "text-blue-600", bg: "bg-blue-50" },
             { l: "Total Avances", v: fmt(totalAdvances), c: "text-orange-600", bg: "bg-orange-50" },
             { l: "Salaire Net", v: fmt(netSalary), c: "text-green-600", bg: "bg-green-50" },
-            { l: "Salaire Gagn� (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "D�ductions �quip.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
+            { l: "Salaire Gagn� (pointage)", v: fmt(earnedSalary), c: "text-amber-600", bg: "bg-amber-50" },{ l: "Déductions Équipe.", v: fmt(totalDeductions), c: "text-red-600", bg: "bg-red-50" },
           ].map(s => (
             <Card key={s.l} className={`${s.bg} border-0`}>
               <CardContent className="pt-4">
@@ -127,17 +127,17 @@ export default function EmployeeProfile() {
           <Card className="bg-white">
             <CardHeader>
               <div className="flex justify-between items-center">
-                <CardTitle className="text-base">?? D�ductions �quipements ({empDeductions.length})</CardTitle>
-                {isBlocked && <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">?? Avance bloqu�e</span>}
+                <CardTitle className="text-base">?? 🔴 Déductions Équipements ({empDeductions.length})</CardTitle>
+                {isBlocked && <span className="px-2 py-1 bg-red-100 text-red-700 rounded-full text-xs">?? Avance bloquée</span>}
               </div>
             </CardHeader>
             <CardContent>
               <table className="w-full text-sm">
                 <thead className="text-slate-500 text-left border-b">
                   <tr>
-                    <th className="pb-2">�quipement</th>
+                    <th className="pb-2">Équipement</th>
                     <th className="pb-2">Dette totale</th>
-                    <th className="pb-2">Pay�</th>
+                    <th className="pb-2">Payé</th>
                     <th className="pb-2">Reste</th>
                     <th className="pb-2">Taux/mois</th>
                     <th className="pb-2">Statut</th>
