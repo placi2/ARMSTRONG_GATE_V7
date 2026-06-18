@@ -133,7 +133,7 @@ export default function Attendance() {
     const joursAbsent   = empAtt.filter((a: any) => a.status === "absent").length;
     const joursConge    = empAtt.filter((a: any) => a.status === "conge").length;
     const salaireMensuel = emp.monthlySalary || 0;
-    const salaireJournalier = salaireMensuel / 26;
+    const salaireJournalier = workingDays > 0 ? salaireMensuel / workingDays : 0;
     const salaireGagne = Math.min(joursPresent * salaireJournalier, salaireMensuel);
     const totalAvances  = emp.totalAdvances || 0;
     // Déduction équipement ce mois
@@ -387,7 +387,7 @@ const exportPDF = () => {
             <div className="flex justify-between items-center mb-3">
               <div className="text-sm text-slate-500">
                 Période : <strong>{new Date(dateFrom).toLocaleDateString("fr-FR")}</strong> au <strong>{new Date(dateTo).toLocaleDateString("fr-FR")}</strong> —
-                Jours ouvrables : <strong>26j (fixe)</strong>
+                Jours ouvrables : <strong>{workingDays}j</strong>
               </div>
               <div className="flex gap-2">
                 <button onClick={exportCSV}
