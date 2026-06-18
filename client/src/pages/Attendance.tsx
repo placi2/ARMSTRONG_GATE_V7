@@ -200,7 +200,7 @@ const exportPDF = () => {
           td { padding: 6px 8px; border: 1px solid #e2e8f0; font-size: 11px; }
           tr:nth-child(even) { background: #f8fafc; }
           .total-row { font-weight: bold; background: #fef3c7 !important; }
-          .footer { margin-top: 24px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #888; text-align: center; }
+          .footer { position: fixed; bottom: 20px; left: 20px; right: 20px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #888; text-align: center; }
         </style>
       </head>
       <body>
