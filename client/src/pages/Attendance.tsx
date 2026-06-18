@@ -7,7 +7,7 @@ import * as XLSX from "xlsx";
 import { useSettings } from "@/contexts/SettingsContext";
 
 const today    = () => new Date().toISOString().split("T")[0];
-const firstDay = () => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split("T")[0];
+const firstDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-01`; };
 
 const STATUS_OPTIONS = [
   { value: "present", label: "✅ Présent",  color: "bg-green-100 text-green-700" },
