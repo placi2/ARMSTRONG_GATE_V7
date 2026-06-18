@@ -58,10 +58,7 @@ export function AuthProvider({children}:{children:ReactNode}) {
       // CRITICAL: save BOTH token and user
       localStorage.setItem("ag_token", token);
       localStorage.setItem("ag_currentUser", JSON.stringify(u));
-      setUser(u);
-    }
-    finally { setIsLoading(false); }
-  };
+      setUser(u);return u;}finally{setIsLoading(false);}};
 
   const logout=()=>{
     setUser(null);

@@ -30,9 +30,14 @@ export default function Login() {
     if (!email || !password) { toast.error("Veuillez remplir tous les champs"); return; }
     setLoading(true);
     try {
-      await login(email, password);
+      const u = await login(email, password);
       toast.success("Connexion réussie");
-      nav("/");
+      const roleNav: Record<string,string[]> = {
+        pdg:["/"],finance:["/"],directeur:["/teams"],
+        rh:["/employees"],chef_equipe:["/production"],
+        equipements:["/equipment"],logistique:["/expenses"],auditeur:["/"]
+      };
+      nav(roleNav[u?.role]?.[0] || "/");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erreur de connexion");
     } finally { setLoading(false); }
