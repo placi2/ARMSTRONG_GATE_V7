@@ -42,10 +42,10 @@ function Router() {
       <Route path="/sites"                  component={() => <ProtectedRoute><Sites /></ProtectedRoute>} />
       <Route path="/site/:id"               component={() => <ProtectedRoute><SiteProfile /></ProtectedRoute>} />
       <Route path="/teams"                  component={() => <ProtectedRoute><Teams /></ProtectedRoute>} />
-      <Route path="/team/:id"               component={() => <ProtectedRoute><TeamProfile /></ProtectedRoute>} />
+      <Route path="/team/:id/employees"               component={() => <ProtectedRoute><TeamProfile /></ProtectedRoute>} />
       <Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route path="/salary-deductions"      component={() => <ProtectedRoute><SalaryDeductions /></ProtectedRoute>} />
-      <Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} /><Route path="/salary-deductions"      component={() => <ProtectedRoute><SalaryDeductions /></ProtectedRoute>} />
+      
       <Route path="/employee/:id"           component={() => <ProtectedRoute><EmployeeProfile /></ProtectedRoute>} />
       <Route path="/production"             component={() => <ProtectedRoute><Production /></ProtectedRoute>} />
       <Route path="/expenses"               component={() => <ProtectedRoute><Expenses /></ProtectedRoute>} />
