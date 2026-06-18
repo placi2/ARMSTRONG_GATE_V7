@@ -30,7 +30,7 @@ import WeeklyReports from "./pages/WeeklyReports";
 import CustomReports from "./pages/CustomReports";
 import Settings from "./pages/Settings";
 import AuditHistory from "./pages/AuditHistory";
-import Requests from "./pages/Requests";import EquipmentStock from "./pages/EquipmentStock";import EquipmentMovements from "./pages/EquipmentMovements";import Attendance from "./pages/Attendance";
+import Requests from "./pages/Requests";import EquipmentStock from "./pages/EquipmentStock";import EquipmentMovements from "./pages/EquipmentMovements";import Attendance from "./pages/Attendance";import SalaryDeductions from "./pages/SalaryDeductions";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 
@@ -44,7 +44,7 @@ function Router() {
       <Route path="/teams"                  component={() => <ProtectedRoute><Teams /></ProtectedRoute>} />
       <Route path="/team/:id"               component={() => <ProtectedRoute><TeamProfile /></ProtectedRoute>} />
       <Route path="/employees"              component={() => <ProtectedRoute><Employees /></ProtectedRoute>} />
-      <Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} />
+      <Route path="/attendance"             component={() => <ProtectedRoute><Attendance /></ProtectedRoute>} /><Route path="/salary-deductions"      component={() => <ProtectedRoute><SalaryDeductions /></ProtectedRoute>} />
       <Route path="/employee/:id"           component={() => <ProtectedRoute><EmployeeProfile /></ProtectedRoute>} />
       <Route path="/production"             component={() => <ProtectedRoute><Production /></ProtectedRoute>} />
       <Route path="/expenses"               component={() => <ProtectedRoute><Expenses /></ProtectedRoute>} />
