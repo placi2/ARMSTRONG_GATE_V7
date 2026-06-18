@@ -90,6 +90,24 @@ export default function Attendance() {
     return inTeam && inSearch;
   });
 
+  const rhPag = usePagination(rhReport);
+
+  // Calcul jours ouvrables entre deux dates (lun-sam)
+  const getWorkingDays = (from: string, to: string) => {
+    let count = 0;
+    const d = new Date(from);
+    const end = new Date(to);
+    while (d <= end) {
+      const day = d.getDay();
+      if (day !== 0) count++; // exclure dimanche
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  };
+
+  const workingDays = getWorkingDays(dateFrom, dateTo);
+
+
   // Calcul rapport par employé
   const rhReport = rhEmployees.map((emp: any) => {
     const empAttendance = attendance.filter((a: any) =>
@@ -108,23 +126,7 @@ export default function Attendance() {
     return { emp, team, site, joursPresent, joursAbsent, joursConge, totalJours, salaireMensuel, salaireGagne };
   });
 
-  const rhPag = usePagination(rhReport);
-
-  // Calcul jours ouvrables entre deux dates (lun-sam)
-  const getWorkingDays = (from: string, to: string) => {
-    let count = 0;
-    const d = new Date(from);
-    const end = new Date(to);
-    while (d <= end) {
-      const day = d.getDay();
-      if (day !== 0) count++; // exclure dimanche
-      d.setDate(d.getDate() + 1);
-    }
-    return count;
-  };
-
-  const workingDays = getWorkingDays(dateFrom, dateTo);
-
+  
   const payReport = rhEmployees.map((emp: any) => {
     const empAtt = attendance.filter((a: any) =>
       a.employeeId === emp.id && a.date >= dateFrom && a.date <= dateTo
