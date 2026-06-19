@@ -104,7 +104,7 @@ export function useRbac(): RbacCapabilities {
     canEditTeam:           is("pdg","directeur"),
 
     // Employees
-    canAddEmployee:        is("pdg","directeur","rh"),
+    canAddEmployee:        is("pdg","rh"),
     canEditEmployee:       is("pdg","directeur","rh"),
     canDeleteEmployee:     is("pdg"),
 

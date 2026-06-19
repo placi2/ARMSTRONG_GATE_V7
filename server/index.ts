@@ -132,8 +132,9 @@ async function initDB(){
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS stock_qty NUMERIC DEFAULT 0`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'remboursable'`).catch(()=>{});
   await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS email TEXT`).catch(()=>{});
-await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS phone TEXT`).catch(()=>{});
-await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS address TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS phone TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE app_settings ADD COLUMN IF NOT EXISTS address TEXT`).catch(()=>{});
+  await pool.query(`ALTER TABLE employees ADD COLUMN IF NOT EXISTS photo TEXT`).catch(()=>{});
   await pool.query(`ALTER TABLE equipment ADD COLUMN IF NOT EXISTS location TEXT DEFAULT 'stock'`).catch(()=>{});
   const{rowCount}=await pool.query("SELECT id FROM users LIMIT 1");
   if(!rowCount){
@@ -178,7 +179,7 @@ app.post("/api/teams",auth,async(req:any,res)=>{const{id,name,siteId,manager}=re
 app.put("/api/teams/:id",auth,async(req:any,res)=>{const{name,siteId,manager}=req.body;await pool.query("UPDATE teams SET name=$1,site_id=$2,manager=$3 WHERE id=$4",[name,siteId,manager,req.params.id]);res.json({ok:true});});
 app.delete("/api/teams/:id",auth,async(req,res)=>{await pool.query("DELETE FROM teams WHERE id=$1",[req.params.id]);res.json({ok:true});});
 app.get("/api/employees",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT e.* FROM employees e JOIN teams t ON e.team_id=t.id WHERE t.site_id=$1 ORDER BY e.name",[u.siteId]):u.role==="chef_equipe"&&u.teamId?await pool.query("SELECT * FROM employees WHERE team_id=$1 ORDER BY name",[u.teamId]):await pool.query("SELECT * FROM employees ORDER BY name");res.json(r.rows.map(c));});
-app.post("/api/employees",auth,async(req:any,res)=>{const{id,name,function:fn,teamId,monthlySalary,joinDate,status}=req.body;await pool.query("INSERT INTO employees(id,name,function,team_id,monthly_salary,join_date,status)VALUES($1,$2,$3,$4,$5,$6,$7)ON CONFLICT(id)DO UPDATE SET name=$2,function=$3,team_id=$4,monthly_salary=$5,join_date=$6,status=$7",[id,name,fn,teamId,monthlySalary||0,joinDate||null,status||"Actif"]);res.json({ok:true});});
+app.post("/api/employees",auth,async(req:any,res)=>{const{id,name,function:fn,teamId,monthlySalary,joinDate,status,photo}=req.body;await pool.query("INSERT INTO employees(id,name,function,team_id,monthly_salary,join_date,status,photo)VALUES($1,$2,$3,$4,$5,$6,$7,$8)ON CONFLICT(id)DO UPDATE SET name=$2,function=$3,team_id=$4,monthly_salary=$5,join_date=$6,status=$7,photo=$8",[id,name,fn,teamId,monthlySalary||0,joinDate||null,status||"Actif",photo||null]);res.json({ok:true});});
 app.put("/api/employees/:id",auth,async(req:any,res)=>{const{name,function:fn,teamId,monthlySalary,status,totalAdvances}=req.body;await pool.query("UPDATE employees SET name=$1,function=$2,team_id=$3,monthly_salary=$4,status=$5,total_advances=$6 WHERE id=$7",[name,fn,teamId,monthlySalary||0,status,totalAdvances||0,req.params.id]);res.json({ok:true});});
 app.delete("/api/employees/:id",auth,async(req,res)=>{await pool.query("DELETE FROM employees WHERE id=$1",[req.params.id]);res.json({ok:true});});
 app.get("/api/productions",auth,async(req:any,res)=>{const u=req.user;const r=u.role==="directeur"&&u.siteId?await pool.query("SELECT * FROM productions WHERE site_id=$1 ORDER BY date DESC",[u.siteId]):u.role==="chef_equipe"&&u.teamId?await pool.query("SELECT * FROM productions WHERE team_id=$1 ORDER BY date DESC",[u.teamId]):await pool.query("SELECT * FROM productions ORDER BY date DESC,created_at DESC");res.json(r.rows.map(c));});

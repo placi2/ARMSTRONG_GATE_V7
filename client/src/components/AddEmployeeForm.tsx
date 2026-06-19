@@ -40,6 +40,7 @@ export default function AddEmployeeForm() {
     function: "",
     role: "User",
     monthlySalary: "",
+    photo: "",
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -62,7 +63,7 @@ export default function AddEmployeeForm() {
     }
 
     const team = teams.find((t) => t.id === formData.teamId);
-    addEmployee({ name: formData.name, teamId: formData.teamId, function: formData.function, role: formData.role, monthlySalary: parseFloat(formData.monthlySalary)||0, salary: parseFloat(formData.monthlySalary)||0, status: "actif" });
+    addEmployee({ name: formData.name, teamId: formData.teamId, function: formData.function, role: formData.role, monthlySalary: parseFloat(formData.monthlySalary)||0, salary: parseFloat(formData.monthlySalary)||0, status: "actif", photo: formData.photo });
     toast.success(
       `Employé "${formData.name}" créé dans l'équipe ${team?.name}`
     );
@@ -106,7 +107,28 @@ export default function AddEmployeeForm() {
               className="w-full"
             />
           </div>
-
+          {/* Photo */}
+          <div className="space-y-2">
+            <Label htmlFor="emp-photo" className="text-sm font-medium">
+              Photo <span className="text-red-500">*</span>
+            </Label>
+            <input
+              id="emp-photo"
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => setFormData({ ...formData, photo: reader.result as string });
+                reader.readAsDataURL(file);
+              }}
+              className="w-full text-sm border rounded-lg px-3 py-2"
+            />
+            {formData.photo && (
+              <img src={formData.photo} alt="Aperçu" className="w-16 h-16 object-cover rounded-lg border mt-2" />
+            )}
+          </div>
           {/* Team Selection */}
           <div className="space-y-2">
             <Label htmlFor="emp-team" className="text-sm font-medium">
