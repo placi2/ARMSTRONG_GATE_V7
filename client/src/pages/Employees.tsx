@@ -27,7 +27,7 @@ function AddEmployeeDialog() {
   const { addEmployee, teams } = useData();
   const rbac = useRbac();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name:"", function:"", teamId:"", monthlySalary:"", joinDate:new Date().toISOString().split("T")[0], status:"Actif" });
+  const [form, setForm] = useState({ name:"", function:"", teamId:"", monthlySalary:"", joinDate:new Date().toISOString().split("T")[0], status:"Actif", photo:"" });
 
   const availableTeams = rbac.scopedToSite && rbac.siteId
     ? (teams as any[]).filter((t:any)=>t.siteId===rbac.siteId)
@@ -35,10 +35,11 @@ function AddEmployeeDialog() {
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault(); e.stopPropagation();
-    if (!form.name||!form.teamId) { toast.error("Nom et équipe obligatoires"); return; }
+    if (!form.name||!form.teamId) { toast.error("Nom et �quipe obligatoires"); return; }
+    if (!form.photo) { toast.error("Photo obligatoire"); return; }
     addEmployee({ ...form, monthlySalary:parseFloat(form.monthlySalary)||0 });
     toast.success(`Employé "${form.name}" ajouté`);
-    setForm({ name:"", function:"", teamId:"", monthlySalary:"", joinDate:new Date().toISOString().split("T")[0], status:"Actif" });
+    setForm({ name:"", function:"", teamId:"", monthlySalary:"", joinDate:new Date().toISOString().split("T")[0], status:"Actif", photo:"" });
     setOpen(false);
   };
 
@@ -49,6 +50,18 @@ function AddEmployeeDialog() {
         <DialogHeader><DialogTitle>Ajouter un Employé</DialogTitle></DialogHeader>
         <form onSubmit={submit} className="space-y-3">
           <div><Label>Nom complet *</Label><Input value={form.name} onChange={e=>setForm({...form,name:e.target.value})} className="mt-1"/></div>
+          <div>
+  <Label>Photo *</Label>
+  <input type="file" accept="image/*" className="mt-1 w-full text-sm border rounded-lg px-3 py-2"
+    onChange={e => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setForm({...form, photo: reader.result as string});
+      reader.readAsDataURL(file);
+    }} />
+  {form.photo && <img src={form.photo} alt="Aperçu" className="w-16 h-16 object-cover rounded-lg border mt-2" />}
+</div>
           <div><Label>Fonction</Label><Input value={form.function} onChange={e=>setForm({...form,function:e.target.value})} className="mt-1"/></div>
           <div><Label>Équipe *</Label>
             <SearchableSelect options={availableTeams.map((t:any)=>({value:t.id,label:t.name}))} value={form.teamId} onChange={v=>setForm({...form,teamId:v})} placeholder="Sélectionner..." className="mt-1"/>
