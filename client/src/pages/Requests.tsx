@@ -58,7 +58,7 @@ export default function Requests() {
   const [selected, setSelected]     = useState<any>(null);
   const [rentalRequest, setRentalRequest] = useState<any>(null);
   const [fournisseur, setFournisseur]     = useState("");
-  const [prixJour, setPrixJour]           = useState("");
+  const [prixHeure, setprixHeure]           = useState("");
   const [duree, setDuree]                 = useState("");
   const [savingRental, setSavingRental]   = useState(false);
   const [newAmount, setNewAmount]   = useState("");
@@ -162,14 +162,14 @@ export default function Requests() {
   };
 
   const handleSaveRental = async () => {
-    if (!rentalRequest || !fournisseur || !prixJour || !duree) return;
+    if (!rentalRequest || !fournisseur || !prixHeure || !duree) return;
     setSavingRental(true);
     try {
       await saveRentalDetails(rentalRequest.id, {
-        fournisseur, prixJour: parseFloat(prixJour), duree: parseFloat(duree),
+        fournisseur, prixHeure: parseFloat(prixHeure), duree: parseFloat(duree),
       });
       setRentalRequest(null);
-      setFournisseur(""); setPrixJour(""); setDuree("");
+      setFournisseur(""); setprixHeure(""); setDuree("");
     } finally { setSavingRental(false); }
   };
 
@@ -492,24 +492,24 @@ export default function Requests() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Prix / jour ($)</label>
-                  <input type="number" value={prixJour} onChange={e => setPrixJour(e.target.value)}
+                  <label className="text-xs text-slate-500 mb-1 block">Prix / heure ($)</label>
+                  <input type="number" value={prixHeure} onChange={e => setprixHeure(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0" />
                 </div>
                 <div>
-                  <label className="text-xs text-slate-500 mb-1 block">Durée (jours)</label>
+                  <label className="text-xs text-slate-500 mb-1 block">Durée (heures)</label>
                   <input type="number" value={duree} onChange={e => setDuree(e.target.value)}
                     className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0" />
                 </div>
               </div>
-              {prixJour && duree && (
+              {prixHeure && duree && (
                 <div className="bg-amber-50 rounded-lg p-3 text-sm">
-                  Montant total : <strong>${(parseFloat(prixJour) * parseFloat(duree)).toFixed(2)}</strong>
+                  Montant total : <strong>${(parseFloat(prixHeure) * parseFloat(duree)).toFixed(2)}</strong>
                 </div>
               )}
             </div>
             <div className="flex gap-2 mt-4">
-              <button onClick={handleSaveRental} disabled={savingRental || !fournisseur || !prixJour || !duree}
+              <button onClick={handleSaveRental} disabled={savingRental || !fournisseur || !prixHeure || !duree}
                 className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
                 {savingRental ? "Enregistrement..." : "✅ Valider"}
               </button>
@@ -565,7 +565,7 @@ export default function Requests() {
                       <button onClick={() => handleLivrer(r)}
                         className="text-teal-600 hover:underline text-xs">✓ Livrer</button>
                     )}
-                    {isLogistique && r.type === "engin" && r.status === "approuve" && !r.rentalDetails && (
+                    {isLogistique && r.type === "engin" && r.status === "en_attente" && !r.rentalDetails && (
                       <button onClick={() => setRentalRequest(r)}
                         className="text-teal-600 hover:underline text-xs">📋 Détails location</button>
                     )}

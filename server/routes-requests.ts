@@ -31,10 +31,10 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
   });
 
   app.put("/api/requests/:id/rental-details", auth, async (req: any, res) => {
-    const { fournisseur, prixJour, duree, photoUrl } = req.body;
-    const rentalDetails = { fournisseur, prixJour, duree, photoUrl, montantTotal: parseFloat(prixJour) * parseFloat(duree) };
+    const { fournisseur, prixHeure, duree, photoUrl } = req.body;
+    const rentalDetails = { fournisseur, prixHeure, duree, photoUrl, montantTotal: parseFloat(prixHeure) * parseFloat(duree) };
     await pool.query(
-      "UPDATE requests SET rental_details=$1, amount=$2, status='approuve', updated_at=NOW() WHERE id=$3",
+      "UPDATE requests SET rental_details=$1, amount=$2, updated_at=NOW() WHERE id=$3",
       [JSON.stringify(rentalDetails), rentalDetails.montantTotal, req.params.id]
     );
     res.json({ ok: true });
