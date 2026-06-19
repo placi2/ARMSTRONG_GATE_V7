@@ -28,7 +28,7 @@ const today = () => new Date().toISOString().split("T")[0];
 const firstDay = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-01`; };
 
 export default function FinanceDashboard() {
-  const { expenses, sites, teams } = useData() as any;
+  const { expenses, sites, teams, salaryDeductions, advances } = useData() as any;
 
   const [dateFrom, setDateFrom] = useState(firstDay());
   const [dateTo, setDateTo]     = useState(today());
@@ -59,6 +59,19 @@ export default function FinanceDashboard() {
     const total = groupExpenses.reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
     return { group, total, count: groupExpenses.length };
   });
+
+  // Déductions équipement en cours
+  const deductionsEnCours = salaryDeductions.filter((d: any) => d.status === "en_cours");
+  const totalDeductions = deductionsEnCours.reduce((s: number, d: any) =>
+    s + (parseFloat(d.amountTotal) - parseFloat(d.amountPaid)), 0);
+
+  // Avances en cours
+  const filteredAdvances = advances.filter((a: any) => {
+    const inSite = filterSite === "all" || a.siteId === filterSite;
+    const inDate = (!dateFrom || a.date >= dateFrom) && (!dateTo || a.date <= dateTo);
+    return inSite && inDate;
+  });
+  const totalAdvances = filteredAdvances.reduce((s: number, a: any) => s + parseFloat(a.amount||0), 0);
 
   const totalGeneral = filtered.reduce((s: number, e: any) => s + parseFloat(e.amount||0), 0);
 
