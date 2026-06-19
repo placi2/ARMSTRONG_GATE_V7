@@ -149,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             {new Date().toLocaleDateString("fr-FR",{weekday:"long",year:"numeric",month:"long",day:"numeric"})}
           </p>
           <div className="flex items-center gap-3">
-            {showBell && (<Link href="/requests"><a className="relative p-2 rounded-full hover:bg-slate-100"><Bell size={18} className="text-slate-600" />{pendingCount > 0 && (<span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">{pendingCount}</span>)}</a></Link>)}
+            {showBell && (<Link href="/requests"><a className="relative p-2 rounded-full hover:bg-slate-100"><Bell size={18} className="text-slate-600" />{pendingCount > 0 && (<span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full w-4 h-4 flex items-center justify-center leading-none">{pendingCount}</span>)}</a></Link>)}
             {!canWrite && <span className="text-xs bg-slate-100 text-slate-500 px-2 py-1 rounded-full">Lecture seule</span>}
             <span className="text-sm text-slate-600 hidden sm:block">{user?.name}</span>
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
