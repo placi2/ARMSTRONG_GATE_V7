@@ -32,7 +32,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function Requests() {
-  const { requests, addRequest, updateRequest, employees, equipmentStock } = useData();
+  const { requests, addRequest, updateRequest, employees, equipmentStock, salaryDeductions } = useData() as any;
   const { user } = useAuth();
   const role = user?.role;
 
@@ -96,6 +96,15 @@ export default function Requests() {
 
   const handleSubmit = async () => {
     if (!title) return;
+    if (formType === "avance_salaire" && employeeId) {
+      const blocked = (salaryDeductions as any[]).some((d: any) =>
+        d.employeeId === employeeId && d.status === "en_cours" && parseFloat(d.amountTotal) > 500
+      );
+      if (blocked) {
+        alert("❌ Cet employé n'est pas éligible à une avance salaire — déduction équipement > $500 en cours.");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const emp = teamEmployees.find((e: any) => e.id === employeeId);
