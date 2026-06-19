@@ -32,14 +32,14 @@ const STATUS_LABEL: Record<string, string> = {
 };
 
 export default function Requests() {
-  const { requests, addRequest, updateRequest, employees, equipmentStock, salaryDeductions } = useData() as any;
+  const { requests, addRequest, updateRequest, employees, equipmentStock, salaryDeductions, saveRentalDetails } = useData() as any;
   const { user } = useAuth();
   const role = user?.role;
 
   const isChef    = role === "chef_equipe";
   const isPDG     = role === "pdg";
   const isFinance = role === "finance";
-  const isEquip   = role === "equipements";
+  const isEquip   = role === "equipements";const isLogistique = role === "logistique";
 
   // Form state
   const [showForm, setShowForm]         = useState(false);
@@ -56,6 +56,11 @@ export default function Requests() {
 
   // PDG modal
   const [selected, setSelected]     = useState<any>(null);
+  const [rentalRequest, setRentalRequest] = useState<any>(null);
+  const [fournisseur, setFournisseur]     = useState("");
+  const [prixJour, setPrixJour]           = useState("");
+  const [duree, setDuree]                 = useState("");
+  const [savingRental, setSavingRental]   = useState(false);
   const [newAmount, setNewAmount]   = useState("");
   const [refuseNote, setRefuseNote] = useState("");
 
@@ -154,6 +159,18 @@ export default function Requests() {
 
   const handleLivrer = async (r: any) => {
     await updateRequest(r.id, { status: "livre" });
+  };
+
+  const handleSaveRental = async () => {
+    if (!rentalRequest || !fournisseur || !prixJour || !duree) return;
+    setSavingRental(true);
+    try {
+      await saveRentalDetails(rentalRequest.id, {
+        fournisseur, prixJour: parseFloat(prixJour), duree: parseFloat(duree),
+      });
+      setRentalRequest(null);
+      setFournisseur(""); setPrixJour(""); setDuree("");
+    } finally { setSavingRental(false); }
   };
 
   // Filtrage selon rôle
@@ -461,7 +478,47 @@ export default function Requests() {
           </div>
         </div>
       )}
-
+      {/* ── Modal détails location engin ── */}
+      {rentalRequest && isLogistique && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
+            <h2 className="text-lg font-bold mb-1">Détails location — {rentalRequest.title}</h2>
+            <p className="text-xs text-slate-500 mb-4">Demande de {rentalRequest.requestedByName}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Fournisseur</label>
+                <input value={fournisseur} onChange={e => setFournisseur(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="Nom du fournisseur..." />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Prix / jour ($)</label>
+                  <input type="number" value={prixJour} onChange={e => setPrixJour(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-500 mb-1 block">Durée (jours)</label>
+                  <input type="number" value={duree} onChange={e => setDuree(e.target.value)}
+                    className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="0" />
+                </div>
+              </div>
+              {prixJour && duree && (
+                <div className="bg-amber-50 rounded-lg p-3 text-sm">
+                  Montant total : <strong>${(parseFloat(prixJour) * parseFloat(duree)).toFixed(2)}</strong>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleSaveRental} disabled={savingRental || !fournisseur || !prixJour || !duree}
+                className="flex-1 bg-teal-600 text-white py-2 rounded-lg text-sm disabled:opacity-50">
+                {savingRental ? "Enregistrement..." : "✅ Valider"}
+              </button>
+              <button onClick={() => setRentalRequest(null)}
+                className="flex-1 border py-2 rounded-lg text-sm">Annuler</button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Tableau demandes ── */}
       {(!isEquip || viewMode === "demandes") && (
         <div className="bg-white rounded-lg shadow-sm overflow-x-auto">
@@ -507,6 +564,10 @@ export default function Requests() {
                     {isEquip && r.status === "en_attente_equipement" && (
                       <button onClick={() => handleLivrer(r)}
                         className="text-teal-600 hover:underline text-xs">✓ Livrer</button>
+                    )}
+                    {isLogistique && r.type === "engin" && r.status === "approuve" && !r.rentalDetails && (
+                      <button onClick={() => setRentalRequest(r)}
+                        className="text-teal-600 hover:underline text-xs">📋 Détails location</button>
                     )}
                   </td>
                 </tr>

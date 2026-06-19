@@ -30,6 +30,16 @@ export function setupRequestsRoutes(app: Express, pool: Pool, auth: any, c: (row
     res.json({ ok: true });
   });
 
+  app.put("/api/requests/:id/rental-details", auth, async (req: any, res) => {
+    const { fournisseur, prixJour, duree, photoUrl } = req.body;
+    const rentalDetails = { fournisseur, prixJour, duree, photoUrl, montantTotal: parseFloat(prixJour) * parseFloat(duree) };
+    await pool.query(
+      "UPDATE requests SET rental_details=$1, amount=$2, status='approuve', updated_at=NOW() WHERE id=$3",
+      [JSON.stringify(rentalDetails), rentalDetails.montantTotal, req.params.id]
+    );
+    res.json({ ok: true });
+  });
+
   // POST — soumettre une demande
   app.post("/api/requests", auth, async (req: any, res) => {
     const {
@@ -136,7 +146,8 @@ export async function createRequestsTable(pool: Pool) {
     "team_id TEXT", "amount NUMERIC", "approved_amount NUMERIC",
     "employee_id TEXT", "employee_name TEXT",
     "equipment_subtype TEXT", "items JSONB",
-    "transfer_mode TEXT", "transfer_note TEXT"
+    "transfer_mode TEXT", "transfer_note TEXT",
+    "rental_details JSONB"
   ];
   for (const col of cols) {
     const [colName, colType] = col.split(" ");
