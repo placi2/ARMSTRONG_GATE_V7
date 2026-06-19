@@ -5,7 +5,7 @@ import Pagination, { usePagination } from "@/components/Pagination";
 
 const GROUPS: Record<string, string[]> = {
   "Équipements":  ["Équipement","Matériel","Sécurité"],
-  "Logistique":   ["Transport","Carburant","Location"],
+  "Logistique":   ["Transport","Carburant","Location","Logistique"],
   "Employés":     ["Salaires","Avance Salaire","Avances salaires","Alimentation","Médical"],
   "Autre":        ["Autre"],
 };
