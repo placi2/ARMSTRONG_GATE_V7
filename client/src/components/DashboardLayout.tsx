@@ -16,6 +16,7 @@ const ALL_NAV = [
   { path:"/equipment-movements",  label:"Mouvements",          icon:Package         }, 
   { path:"/attendance",          label:"Pointage",            icon:UserCheck       },
   { path:"/salary-deductions",    label:"Déductions Salaire",  icon:DollarSign      },
+  { path:"/finance-dashboard",    label:"Dépenses Finance",    icon:DollarSign      },
   { path:"/sites",               label:"Sites",                icon:MapPin          },
   { path:"/teams",               label:"Équipes",              icon:Users           },
   { path:"/employees",           label:"Employés",             icon:UserCheck       },

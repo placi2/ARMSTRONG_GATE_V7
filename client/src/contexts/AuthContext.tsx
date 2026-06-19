@@ -25,7 +25,7 @@ export const ROLE_NAV:Record<UserRole,string[]> = {
   pdg:["/","/sites","/teams","/employees","/production","/expenses","/cash","/site-cash","/equipment","/financial","/transaction-history","/comparison","/performance-comparison","/weekly-reports","/custom-reports","/settings","/audit","/requests","/salary-deductions"],
   directeur:["/teams","/employees","/production","/expenses","/cash","/equipment","/financial","/transaction-history","/weekly-reports","/custom-reports","/equipment-movements"],
   rh:["/employees","/teams","/requests","/attendance","/salary-deductions"],
-  finance:["/","/financial","/cash","/site-cash","/expenses","/transaction-history","/weekly-reports","/custom-reports","/requests","/salary-deductions"],
+  finance:["/","/financial","/cash","/site-cash","/expenses","/transaction-history","/weekly-reports","/custom-reports","/requests","/salary-deductions","/finance-dashboard"],
   chef_equipe:["/production","/equipment","/requests","/attendance"],
   equipements:["/equipment","/expenses","/requests","/equipment-stock","/equipment-movements"],
   logistique:["/sites","/production","/equipment","/expenses","/requests"],
