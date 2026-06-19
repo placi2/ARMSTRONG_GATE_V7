@@ -96,6 +96,13 @@ export default function EmployeeProfile() {
           <Link href="/employees">
             <Button variant="outline" size="sm"><ArrowLeft size={14} className="mr-1" />Retour</Button>
           </Link>
+          {(employee as any).photo ? (
+            <img src={(employee as any).photo} alt={employee.name} className="w-14 h-14 rounded-full object-cover border-2 border-amber-200" />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+              <User size={24} className="text-slate-400" />
+            </div>
+          )}
           <div>
             <h1 className="text-2xl font-bold text-slate-900">{employee.name}</h1>
             <p className="text-slate-400 text-sm">{employee.function || "Employé"} · {team?.name || "—"} · {site?.name || "—"}</p>
